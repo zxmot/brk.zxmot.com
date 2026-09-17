@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>brk — 一个 &lt;10kb 的微前端骨架</title>
+<meta name="description" content="brk 是一个小于 10kb 的微前端骨架：无虚拟 DOM、无 diff、无状态管理。组件只渲染一次，更新由你掌控。">
+<style>
+  :root {
+    --bg:         #0a0b10;
+    --bg-soft:    #0e1017;
+    --surface:    #131722;
+    --surface-2:  #171b27;
+    --border:     #232838;
+    --border-soft:#1a1f2d;
+    --text:       #e7eaf2;
+    --text-dim:   #9aa3b8;
+    --text-dimmer:#5c6479;
+    --accent:     #5eead4;
+    --accent-2:   #60a5fa;
+    --accent-dim: rgba(94, 234, 212, 0.12);
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --radius: 12px;
+    --maxw: 1080px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  /* ---------- NAV ---------- */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 11, 16, 0.72);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .nav-inner {
+    max-width: var(--maxw); margin: 0 auto;
+    padding: 0 24px;
+    height: 58px;
+    display: flex; align-items: center; gap: 32px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 7px;
+    display: grid; place-items: center;
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    color: #06121a; font-weight: 800; font-size: 15px;
+    font-family: var(--mono);
+    box-shadow: 0 0 0 1px rgba(94,234,212,0.25), 0 6px 20px -6px rgba(94,234,212,0.5);
+  }
+  .brand-name { font-family: var(--mono); font-size: 16px; }
+  .nav-links { display: flex; gap: 26px; font-size: 14px; color: var(--text-dim); }
+  .nav-links a { transition: color .15s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-right { margin-left: auto; }
+  .ver {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(94,234,212,0.22);
+    padding: 3px 9px; border-radius: 999px;
+  }
+  @media (max-width: 720px) { .nav-links { display: none; } }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    position: relative;
+    padding: 96px 24px 72px;
+    overflow: hidden;
+    text-align: center;
+  }
+  .hero::before {
+    content: "";
+    position: absolute; inset: -40% -20% auto;
+    height: 700px;
+    background:
+      radial-gradient(600px 320px at 50% 30%, rgba(94,234,212,0.10), transparent 70%),
+      radial-gradient(500px 300px at 70% 10%, rgba(96,165,250,0.08), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-inner { position: relative; max-width: 760px; margin: 0 auto; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 5px 14px; border-radius: 999px;
+    margin-bottom: 28px;
+  }
+  .hero-badge .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+  h1.hero-title {
+    margin: 0 0 8px;
+    font-family: var(--mono);
+    font-size: clamp(52px, 9vw, 88px);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-weight: 700;
+    background: linear-gradient(180deg, #ffffff 20%, #7f8ba3 130%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero-sub {
+    margin: 0 0 20px;
+    font-size: clamp(17px, 2.4vw, 21px);
+    color: var(--text);
+    font-weight: 500;
+  }
+  .hero-lead {
+    margin: 0 auto 36px;
+    max-width: 560px;
+    color: var(--text-dim);
+    font-size: 15.5px;
+  }
+  .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 22px;
+    border-radius: 9px;
+    font-size: 14.5px; font-weight: 500;
+    border: 1px solid transparent;
+    transition: transform .12s, background .15s, border-color .15s, box-shadow .15s;
+    cursor: pointer;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary {
+    background: linear-gradient(180deg, #6ff0dc, #45c9b2);
+    color: #04141a;
+    font-weight: 600;
+    box-shadow: 0 10px 30px -12px rgba(94,234,212,0.7);
+  }
+  .btn-primary:hover { box-shadow: 0 12px 36px -10px rgba(94,234,212,0.85); }
+  .btn-ghost {
+    border-color: var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: #333a4d; }
+
+  /* ---------- STATS ---------- */
+  .stats {
+    max-width: var(--maxw); margin: 0 auto;
+    padding: 0 24px 8px;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border-soft);
+    border-top: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .stat { background: var(--bg); padding: 22px 12px; text-align: center; }
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 19px; color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .stat-num em { color: var(--accent); font-style: normal; }
+  .stat-label { font-size: 12.5px; color: var(--text-dimmer); margin-top: 4px; }
+  @media (max-width: 620px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ---------- SECTION ---------- */
+  .section { padding: 76px 24px; }
+  .section-inner { max-width: var(--maxw); margin: 0 auto; }
+  .section-head { max-width: 620px; margin-bottom: 36px; }
+  .eyebrow {
+    display: inline-block;
+    font-family: var(--mono); font-size: 12px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 12px;
+  }
+  h2 {
+    margin: 0 0 10px;
+    font-size: 27px; font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .section-head p { margin: 0; color: var(--text-dim); font-size: 15px; }
+
+  /* ---------- CODE ---------- */
+  .code {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-soft);
+    overflow: hidden;
+    box-shadow: 0 30px 60px -40px rgba(0,0,0,0.9);
+  }
+  .code-bar {
+    display: flex; align-items: center; gap: 7px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--surface);
+  }
+  .code-bar .dot { width: 10px; height: 10px; border-radius: 50%; background: #2b3145; }
+  .code-bar .dot:nth-child(2) { background: #2b3145; }
+  .code-bar .dot:nth-child(3) { background: #2b3145; }
+  .code-title {
+    margin-left: 8px;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer);
+  }
+  pre {
+    margin: 0; padding: 20px 22px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: #c9d1e0;
+    tab-size: 2;
+  }
+  pre::-webkit-scrollbar { height: 8px; }
+  pre::-webkit-scrollbar-thumb { background: #2b3145; border-radius: 4px; }
+  pre::-webkit-scrollbar-track { background: transparent; }
+
+  /* tokens */
+  .k { color: #ff7eb6; }              /* keyword */
+  .f { color: #82c8ff; }              /* function */
+  .s { color: #b8e986; }              /* string */
+  .t { color: #5eead4; }              /* jsx tag */
+  .a { color: #c4a7ff; }              /* attribute */
+  .c { color: #5c6479; font-style: italic; }
+  .n { color: #ffd479; }
+
+  /* ---------- PAGE EXAMPLE ---------- */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 880px) { .split { grid-template-columns: 1fr; } }
+  .split .code { height: 100%; }
+  .split-label {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer);
+    margin-bottom: 8px; letter-spacing: 0.02em;
+  }
+  .split-label b { color: var(--accent); font-weight: 500; }
+
+  /* ---------- DESIGN CARDS ---------- */
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 520px) { .grid-4 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 20px;
+    transition: border-color .15s, transform .15s, background .15s;
+  }
+  .card:hover { border-color: #333b52; background: var(--surface-2); }
+  .card-num {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--accent); opacity: 0.75;
+    margin-bottom: 14px;
+  }
+  .card h3 { margin: 0 0 8px; font-size: 15.5px; font-weight: 600; }
+  .card p { margin: 0; font-size: 13.8px; color: var(--text-dim); line-height: 1.65; }
+
+  /* ---------- FIT ---------- */
+  .fit { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .fit { grid-template-columns: 1fr; } }
+  .fit-box {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    background: var(--surface);
+  }
+  .fit-box h3 {
+    margin: 0 0 16px; font-size: 14px;
+    font-family: var(--mono); letter-spacing: 0.02em;
+  }
+  .fit-box.yes h3 { color: var(--accent); }
+  .fit-box.no h3 { color: #ff8a8a; }
+  .fit-box ul { margin: 0; padding: 0; list-style: none; }
+  .fit-box li {
+    position: relative;
+    padding-left: 22px; margin-bottom: 11px;
+    font-size: 14px; color: var(--text-dim);
+  }
+  .fit-box li:last-child { margin-bottom: 0; }
+  .fit-box.yes li::before {
+    content: "✓"; position: absolute; left: 0;
+    color: var(--accent); font-weight: 700;
+  }
+  .fit-box.no li::before {
+    content: "✕"; position: absolute; left: 0;
+    color: #ff8a8a; font-weight: 700;
+  }
+
+  /* ---------- SECTIONS NAV ---------- */
+  .sections { background: var(--bg-soft); border-top: 1px solid var(--border-soft); border-bottom: 1px solid var(--border-soft); }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .grid-3 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .grid-3 { grid-template-columns: 1fr; } }
+
+  .sec-card {
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    transition: border-color .15s, background .15s, transform .15s;
+    position: relative;
+  }
+  .sec-card:hover {
+    border-color: rgba(94,234,212,0.35);
+    background: var(--surface-2);
+    transform: translateY(-2px);
+  }
+  .sec-card .ico {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--accent); margin-bottom: 14px;
+    opacity: 0.9;
+  }
+  .sec-card h3 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+  .sec-card p { margin: 0 0 14px; font-size: 13.5px; color: var(--text-dim); line-height: 1.6; }
+  .tag {
+    display: inline-block;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dimmer);
+    border: 1px solid var(--border);
+    padding: 2px 8px; border-radius: 999px;
+  }
+  .tag.wip { color: #ffd479; border-color: rgba(255,212,121,0.25); background: rgba(255,212,121,0.06); }
+
+  /* ---------- FOOTER ---------- */
+  footer {
+    padding: 48px 24px 56px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--text-dimmer);
+    font-size: 13px;
+  }
+  .footer-inner {
+    max-width: var(--maxw); margin: 0 auto;
+    display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+    align-items: center;
+  }
+  .footer-inner .brand { color: var(--text-dim); font-size: 14px; }
+  .footer-links { display: flex; gap: 22px; }
+  .footer-links a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark">b</span>
+      <span class="brand-name">brk</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#quickstart">快速开始</a>
+      <a href="#page">页面</a>
+      <a href="#design">设计取舍</a>
+      <a href="#sections">文档</a>
+    </nav>
+    <div class="nav-right">
+      <span class="ver">v0.1 · 预览</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <span class="dot"></span>
+      核心 &lt; 10kb · 无虚拟 DOM · 零框架开销
+    </div>
+    <h1 class="hero-title">brk</h1>
+    <p class="hero-sub">一个微前端的骨架，不是一个框架。</p>
+    <p class="hero-lead">
+      组件只渲染一次，更新由你掌控。<br>
+      不做 diff、不做调度、不做状态管理 —— 只提供一套最小约定。
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#quickstart">快速开始 →</a>
+      <a class="btn btn-ghost" href="#design">设计取舍</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STATS ============ -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-num">&lt; <em>10</em> kb</div>
+    <div class="stat-label">init.js 运行时</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num"><em>0</em> 依赖</div>
+    <div class="stat-label">纯 TypeScript</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num"><em>1</em> 次渲染</div>
+    <div class="stat-label">组件只执行一次</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">ESM</div>
+    <div class="stat-label">页面即模块</div>
+  </div>
+</div>
+
+<!-- ============ QUICKSTART ============ -->
+<section class="section" id="quickstart">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="eyebrow">快速开始</span>
+      <h2>三行跑起来</h2>
+      <p>
+        <code style="font-family:var(--mono);font-size:13px;color:var(--accent)">init.js</code>
+        准备好 <code style="font-family:var(--mono);font-size:13px;color:var(--text)">window.jsx</code>
+        与 <code style="font-family:var(--mono);font-size:13px;color:var(--text)">globalThis._brk_</code>，
+        之后的每一页都只是一个普通的 ES 模块。
+      </p>
+    </div>
+
+    <div class="code" style="max-width:720px;">
+      <div class="code-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="code-title">index.html</span>
+      </div>
+      <pre><code><span class="t">&lt;script</span> <span class="a">src</span>=<span class="s">"/static/init.js"</span><span class="t">&gt;&lt;/script&gt;</span>
+<span class="t">&lt;script&gt;</span><span class="f">brk.render</span>({ <span class="a">load</span>: <span class="s">"/dist/app/page.mjs"</span> })<span class="t">&lt;/script&gt;</span></code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAGE EXAMPLE ============ -->
+<section class="section" id="page" style="padding-top:0;">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="eyebrow">页面</span>
+      <h2>你的页面，几乎全是应用代码</h2>
+      <p>
+        用 esbuild 编译，<code style="font-family:var(--mono);font-size:13px;color:var(--accent)">format: 'esm'</code>。
+        框架运行时早已在 init.js 中就绪，页面产物里没有 loader、没有 diff。
+      </p>
+    </div>
+
+    <div class="split">
+      <div>
+        <div class="split-label"><b>// </b>page.tsx — 你写的</div>
+        <div class="code">
+          <div class="code-bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="code-title">page.tsx</span>
+          </div>
+          <pre><code><span class="k">import</span> { brk } <span class="k">from</span> <span class="s">'@/brk'</span>;
+
+<span class="k">const</span> <span class="f">vino</span> = () <span class="k">=&gt;</span> (
+  <span class="t">&lt;div</span> <span class="a">css</span>=<span class="s">"padding: 4px"</span><span class="t">&gt;</span>
+    <span class="t">&lt;brk.card&gt;</span>
+      <span class="t">&lt;h1&gt;</span>Hello World<span class="t">&lt;/h1&gt;</span>
+      <span class="t">&lt;div</span> <span class="a">cls</span>=<span class="s">"bge"</span> <span class="a">css</span>=<span class="s">"height: 1px; margin: 4px 0 8px"</span><span class="t">/&gt;</span>
+    <span class="t">&lt;/brk.card&gt;</span>
+  <span class="t">&lt;/div&gt;</span>
+);
+
+<span class="k">export</span> <span class="k">const</span> page = { vino };</code></pre>
+        </div>
+      </div>
+
+      <div>
+        <div class="split-label"><b>// </b>page.mjs — esbuild 编译产物</div>
+        <div class="code">
+          <div class="code-bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="code-title">page.mjs</span>
+          </div>
+          <pre><code><span class="k">import</span> { brk } <span class="k">from</span> <span class="s">'@/brk'</span>;
+<span class="c">// format: 'esm' · jsxFactory: jsx</span>
+
+<span class="k">const</span> <span class="f">vino</span> = () <span class="k">=&gt;</span> <span class="f">jsx</span>(<span class="s">"div"</span>, { <span class="a">css</span>: <span class="s">"padding: 4px"</span> },
+  <span class="f">jsx</span>(brk.card, {},
+    <span class="f">jsx</span>(<span class="s">"h1"</span>, {}, <span class="s">"Hello World"</span>),
+    <span class="f">jsx</span>(<span class="s">"div"</span>, {
+      <span class="a">cls</span>: <span class="s">"bge"</span>,
+      <span class="a">css</span>: <span class="s">"height: 1px; margin: 4px 0 8px"</span>
+    })
+  )
+);
+
+<span class="k">export</span> <span class="k">const</span> page = { vino };</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DESIGN ============ -->
+<section class="section" id="design" style="padding-top:0;">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="eyebrow">设计取舍</span>
+      <h2>框架能不管的，就都不管</h2>
+      <p>下面四条不是特性，而是决定。它们解释了为什么 brk 能做到这么小，也解释了它会让你在哪些地方需要多写一点。</p>
+    </div>
+
+    <div class="grid-4">
+      <div class="card">
+        <div class="card-num">01</div>
+        <h3>渲染一次</h3>
+        <p>组件函数只执行一次，DOM 只生成一次。没有 hooks，没有重渲染，<code style="font-family:var(--mono);font-size:12.5px">UI = f(state)</code> 由你自己维持。</p>
+      </div>
+      <div class="card">
+        <div class="card-num">02</div>
+        <h3>不做调度</h3>
+        <p>更新交给 <code style="font-family:var(--mono);font-size:12.5px">replaceChildren</code> 和 <code style="font-family:var(--mono);font-size:12.5px">textContent</code>，刷新粒度由你决定。框架不介入状态到 DOM 的同步。</p>
+      </div>
+      <div class="card">
+        <div class="card-num">03</div>
+        <h3>全局能力</h3>
+        <p><code style="font-family:var(--mono);font-size:12.5px">init.js</code> 把 <code style="font-family:var(--mono);font-size:12.5px">jsx</code> 与 <code style="font-family:var(--mono);font-size:12.5px">globalThis._brk_</code> 一次性注入，页面产物里只有你的应用代码。</p>
+      </div>
+      <div class="card">
+        <div class="card-num">04</div>
+        <h3>可整体替换</h3>
+        <p><code style="font-family:var(--mono);font-size:12.5px">init.js</code> 是源码不是黑盒。你可以覆盖 <code style="font-family:var(--mono);font-size:12.5px">brk.opens</code>，甚至重写整套运行时。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FIT ============ -->
+<section class="section" id="fit" style="padding-top:0;">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="eyebrow">适用边界</span>
+      <h2>它适合什么，不适合什么</h2>
+    </div>
+
+    <div class="fit">
+      <div class="fit-box yes">
+        <h3>// 适合</h3>
+        <ul>
+          <li>多页应用、后台系统、微前端外壳</li>
+          <li>在既有系统里增量引入的一层渲染骨架</li>
+          <li>对体积敏感、想要完全掌控更新时机的团队</li>
+          <li>需要页面产物 100% 是自身业务代码的场景</li>
+        </ul>
+      </div>
+      <div class="fit-box no">
+        <h3>// 不适合</h3>
+        <ul>
+          <li>期望响应式自动更新、数据驱动的视图</li>
+          <li>期望开箱即用的组件生态与脚手架</li>
+          <li>期望 React / Vue 那样的开发体验与心智模型</li>
+          <li>需要 SSR 直出完整 HTML 内容的项目</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECTIONS NAV ============ -->
+<section class="section sections" id="sections">
+  <div class="section-inner">
+    <div class="section-head">
+      <span class="eyebrow">文档</span>
+      <h2>板块</h2>
+      <p>骨架已经就位，下面每一块都会独立成页，逐步补齐。</p>
+    </div>
+
+    <div class="grid-3">
+
+      <a class="sec-card" href="#">
+        <div class="ico">01 / guide</div>
+        <h3>指南</h3>
+        <p>从 init.js 到第一个页面。讲清 JSX 语法、页面契约、渲染与更新、父子通信。</p>
+        <span class="tag wip">即将到来</span>
+      </a>
+
+      <a class="sec-card" href="#">
+        <div class="ico">02 / api</div>
+        <h3>API 参考</h3>
+        <p>brk 命名空间的完整说明：card、icon、opens、_load、_json、v、weak 等。</p>
+        <span class="tag wip">即将到来</span>
+      </a>
+
+      <a class="sec-card" href="#">
+        <div class="ico">03 / architecture</div>
+        <h3>架构原理</h3>
+        <p>init.js 如何注入运行时、服务端引导、页面模块协议，以及为什么没有虚拟 DOM。</p>
+        <span class="tag wip">即将到来</span>
+      </a>
+
+      <a class="sec-card" href="#">
+        <div class="ico">04 / recipes</div>
+        <h3>实战配方</h3>
+        <p>微前端外壳、多页切换、锚点刷新、用你自己的 init/brk.js 完全替换框架。</p>
+        <span class="tag wip">即将到来</span>
+      </a>
+
+      <a class="sec-card" href="#">
+        <div class="ico">05 / extensions</div>
+        <h3>扩展机制</h3>
+        <p>以插件形式加载的组件库与 WebComponent 生态，同功能全局只加载一次。</p>
+        <span class="tag wip">即将到来</span>
+      </a>
+
+      <a class="sec-card" href="#">
+        <div class="ico">06 / compare</div>
+        <h3>对比</h3>
+        <p>brk 与 React、Vue、qiankun 等方案的差异，以及各自适合的取舍。</p>
+        <span class="tag wip">即将到来</span>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="footer-inner">
+    <div class="brand">
+      <span class="brand-mark" style="width:20px;height:20px;font-size:12px;">b</span>
+      <span style="margin-left:8px;">brk — 一个微前端骨架</span>
+    </div>
+    <div class="footer-links">
+      <a href="#quickstart">快速开始</a>
+      <a href="#design">设计取舍</a>
+      <a href="#sections">文档</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
