@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>brk — 一个 &lt;10kb 的微前端骨架</title>
+<title>brk · 一个 &lt;10kb 的微前端骨架</title>
 <meta name="description" content="brk 是一个小于 10kb 的微前端骨架：无虚拟 DOM、无 diff、无状态管理。组件只渲染一次，更新由你掌控。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%235eead4'/><text x='50' y='72' font-size='70' font-family='monospace' font-weight='800' text-anchor='middle' fill='%2306121a'>b</text></svg>">
 <style>
   :root {
     --bg:         #0a0b10;
@@ -22,7 +23,7 @@
     --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     --radius: 12px;
-    --maxw: 1080px;
+    --maxw: 1140px;
   }
 
   * { box-sizing: border-box; }
@@ -66,7 +67,7 @@
   .nav-links { display: flex; gap: 26px; font-size: 14px; color: var(--text-dim); }
   .nav-links a { transition: color .15s; }
   .nav-links a:hover { color: var(--text); }
-  .nav-right { margin-left: auto; }
+  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
   .ver {
     font-family: var(--mono); font-size: 12px;
     color: var(--accent);
@@ -74,33 +75,57 @@
     border: 1px solid rgba(94,234,212,0.22);
     padding: 3px 9px; border-radius: 999px;
   }
+  .gh {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    background: var(--surface);
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .gh:hover { color: var(--text); border-color: #333a4d; background: var(--surface-2); }
+  .gh svg { width: 16px; height: 16px; fill: currentColor; }
   @media (max-width: 720px) { .nav-links { display: none; } }
 
   /* ---------- HERO ---------- */
   .hero {
     position: relative;
-    padding: 96px 24px 72px;
+    padding: 84px 24px 64px;
     overflow: hidden;
-    text-align: center;
   }
   .hero::before {
     content: "";
-    position: absolute; inset: -40% -20% auto;
-    height: 700px;
+    position: absolute; inset: -30% -10% auto;
+    height: 720px;
     background:
-      radial-gradient(600px 320px at 50% 30%, rgba(94,234,212,0.10), transparent 70%),
-      radial-gradient(500px 300px at 70% 10%, rgba(96,165,250,0.08), transparent 70%);
+      radial-gradient(640px 340px at 22% 20%, rgba(94,234,212,0.10), transparent 70%),
+      radial-gradient(560px 320px at 82% 30%, rgba(96,165,250,0.08), transparent 70%);
     pointer-events: none;
   }
-  .hero-inner { position: relative; max-width: 760px; margin: 0 auto; }
+  .hero-inner {
+    position: relative;
+    max-width: var(--maxw);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+    gap: 56px;
+    align-items: center;
+  }
+  @media (max-width: 900px) {
+    .hero { padding-top: 56px; }
+    .hero-inner { grid-template-columns: 1fr; gap: 36px; }
+  }
+
+  .hero-left { min-width: 0; }
   .hero-badge {
     display: inline-flex; align-items: center; gap: 8px;
     font-family: var(--mono); font-size: 12.5px;
     color: var(--text-dim);
     border: 1px solid var(--border);
     background: var(--surface);
-    padding: 5px 14px; border-radius: 999px;
-    margin-bottom: 28px;
+    padding: 5px 13px; border-radius: 999px;
+    margin-bottom: 26px;
   }
   .hero-badge .dot {
     width: 6px; height: 6px; border-radius: 50%;
@@ -108,11 +133,11 @@
     box-shadow: 0 0 10px var(--accent);
   }
   h1.hero-title {
-    margin: 0 0 8px;
+    margin: 0 0 14px;
     font-family: var(--mono);
-    font-size: clamp(52px, 9vw, 88px);
-    line-height: 1;
-    letter-spacing: -0.04em;
+    font-size: clamp(56px, 9vw, 92px);
+    line-height: 0.95;
+    letter-spacing: -0.05em;
     font-weight: 700;
     background: linear-gradient(180deg, #ffffff 20%, #7f8ba3 130%);
     -webkit-background-clip: text; background-clip: text;
@@ -120,25 +145,27 @@
   }
   .hero-sub {
     margin: 0 0 20px;
-    font-size: clamp(17px, 2.4vw, 21px);
+    font-size: clamp(18px, 2.4vw, 22px);
     color: var(--text);
     font-weight: 500;
+    letter-spacing: -0.01em;
   }
   .hero-lead {
-    margin: 0 auto 36px;
-    max-width: 560px;
+    margin: 0 0 32px;
     color: var(--text-dim);
     font-size: 15.5px;
+    max-width: 460px;
   }
-  .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
   .btn {
-    display: inline-flex; align-items: center; gap: 8px;
+    display: inline-flex; align-items: center; gap: 9px;
     padding: 11px 22px;
     border-radius: 9px;
     font-size: 14.5px; font-weight: 500;
     border: 1px solid transparent;
     transition: transform .12s, background .15s, border-color .15s, box-shadow .15s;
     cursor: pointer;
+    font-family: inherit;
   }
   .btn:active { transform: translateY(1px); }
   .btn-primary {
@@ -154,47 +181,14 @@
     color: var(--text-dim);
   }
   .btn-ghost:hover { color: var(--text); border-color: #333a4d; }
+  .btn .arr { font-family: var(--mono); }
 
-  /* ---------- STATS ---------- */
-  .stats {
-    max-width: var(--maxw); margin: 0 auto;
-    padding: 0 24px 8px;
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 1px;
-    background: var(--border-soft);
-    border-top: 1px solid var(--border-soft);
-    border-bottom: 1px solid var(--border-soft);
+  /* ---------- HERO CODE ---------- */
+  .hero-code {
+    min-width: 0;
+    display: flex; flex-direction: column; gap: 12px;
+    perspective: 1200px;
   }
-  .stat { background: var(--bg); padding: 22px 12px; text-align: center; }
-  .stat-num {
-    font-family: var(--mono);
-    font-size: 19px; color: var(--text);
-    letter-spacing: -0.02em;
-  }
-  .stat-num em { color: var(--accent); font-style: normal; }
-  .stat-label { font-size: 12.5px; color: var(--text-dimmer); margin-top: 4px; }
-  @media (max-width: 620px) {
-    .stats { grid-template-columns: repeat(2, 1fr); }
-  }
-
-  /* ---------- SECTION ---------- */
-  .section { padding: 76px 24px; }
-  .section-inner { max-width: var(--maxw); margin: 0 auto; }
-  .section-head { max-width: 620px; margin-bottom: 36px; }
-  .eyebrow {
-    display: inline-block;
-    font-family: var(--mono); font-size: 12px;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--accent); margin-bottom: 12px;
-  }
-  h2 {
-    margin: 0 0 10px;
-    font-size: 27px; font-weight: 600;
-    letter-spacing: -0.02em;
-  }
-  .section-head p { margin: 0; color: var(--text-dim); font-size: 15px; }
-
-  /* ---------- CODE ---------- */
   .code {
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -209,19 +203,26 @@
     background: var(--surface);
   }
   .code-bar .dot { width: 10px; height: 10px; border-radius: 50%; background: #2b3145; }
-  .code-bar .dot:nth-child(2) { background: #2b3145; }
-  .code-bar .dot:nth-child(3) { background: #2b3145; }
   .code-title {
     margin-left: 8px;
     font-family: var(--mono); font-size: 12px;
     color: var(--text-dimmer);
   }
+  .code-foot {
+    padding: 9px 16px;
+    border-top: 1px solid var(--border-soft);
+    background: var(--surface);
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--text-dimmer);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .code-foot .ok { color: var(--accent); }
   pre {
-    margin: 0; padding: 20px 22px;
+    margin: 0; padding: 18px 20px;
     overflow-x: auto;
     font-family: var(--mono);
-    font-size: 13.5px;
-    line-height: 1.75;
+    font-size: 13px;
+    line-height: 1.7;
     color: #c9d1e0;
     tab-size: 2;
   }
@@ -230,24 +231,52 @@
   pre::-webkit-scrollbar-track { background: transparent; }
 
   /* tokens */
-  .k { color: #ff7eb6; }              /* keyword */
-  .f { color: #82c8ff; }              /* function */
-  .s { color: #b8e986; }              /* string */
-  .t { color: #5eead4; }              /* jsx tag */
-  .a { color: #c4a7ff; }              /* attribute */
+  .k { color: #ff7eb6; }
+  .f { color: #82c8ff; }
+  .s { color: #b8e986; }
+  .t { color: #5eead4; }
+  .a { color: #c4a7ff; }
   .c { color: #5c6479; font-style: italic; }
   .n { color: #ffd479; }
 
-  /* ---------- PAGE EXAMPLE ---------- */
-  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-  @media (max-width: 880px) { .split { grid-template-columns: 1fr; } }
-  .split .code { height: 100%; }
-  .split-label {
-    font-family: var(--mono); font-size: 12px;
-    color: var(--text-dimmer);
-    margin-bottom: 8px; letter-spacing: 0.02em;
+  /* ---------- STATS ---------- */
+  .stats {
+    max-width: var(--maxw); margin: 0 auto;
+    padding: 0 24px;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border-soft);
+    border-top: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--border-soft);
   }
-  .split-label b { color: var(--accent); font-weight: 500; }
+  .stat { background: var(--bg); padding: 22px 12px; text-align: center; }
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 18px; color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .stat-num em { color: var(--accent); font-style: normal; }
+  .stat-label { font-size: 12.5px; color: var(--text-dimmer); margin-top: 4px; }
+  @media (max-width: 620px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ---------- SECTION ---------- */
+  .section { padding: 72px 24px; }
+  .section-inner { max-width: var(--maxw); margin: 0 auto; }
+  .section-head { max-width: 640px; margin-bottom: 34px; }
+  .eyebrow {
+    display: inline-block;
+    font-family: var(--mono); font-size: 12px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 12px;
+  }
+  h2 {
+    margin: 0 0 10px;
+    font-size: 26px; font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .section-head p { margin: 0; color: var(--text-dim); font-size: 15px; }
 
   /* ---------- DESIGN CARDS ---------- */
   .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
@@ -269,6 +298,11 @@
   }
   .card h3 { margin: 0 0 8px; font-size: 15.5px; font-weight: 600; }
   .card p { margin: 0; font-size: 13.8px; color: var(--text-dim); line-height: 1.65; }
+  .card code {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--accent); background: rgba(94,234,212,0.08);
+    padding: 1px 5px; border-radius: 4px;
+  }
 
   /* ---------- FIT ---------- */
   .fit { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -302,7 +336,11 @@
   }
 
   /* ---------- SECTIONS NAV ---------- */
-  .sections { background: var(--bg-soft); border-top: 1px solid var(--border-soft); border-bottom: 1px solid var(--border-soft); }
+  .sections {
+    background: var(--bg-soft);
+    border-top: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--border-soft);
+  }
   .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   @media (max-width: 900px) { .grid-3 { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 560px) { .grid-3 { grid-template-columns: 1fr; } }
@@ -335,7 +373,18 @@
     border: 1px solid var(--border);
     padding: 2px 8px; border-radius: 999px;
   }
-  .tag.wip { color: #ffd479; border-color: rgba(255,212,121,0.25); background: rgba(255,212,121,0.06); }
+  .tag.ready { color: var(--accent); border-color: rgba(94,234,212,0.28); background: var(--accent-dim); }
+  .tag.wip   { color: #ffd479; border-color: rgba(255,212,121,0.25); background: rgba(255,212,121,0.06); }
+
+  /* 高亮指南卡片 */
+  .sec-card.featured {
+    border-color: rgba(94,234,212,0.28);
+    background: linear-gradient(160deg, rgba(94,234,212,0.05) 0%, var(--surface) 55%);
+  }
+  .sec-card.featured:hover {
+    border-color: rgba(94,234,212,0.5);
+    background: linear-gradient(160deg, rgba(94,234,212,0.08) 0%, var(--surface-2) 55%);
+  }
 
   /* ---------- FOOTER ---------- */
   footer {
@@ -352,6 +401,8 @@
   .footer-inner .brand { color: var(--text-dim); font-size: 14px; }
   .footer-links { display: flex; gap: 22px; }
   .footer-links a:hover { color: var(--text); }
+  .footer-links a.gh-link { display: inline-flex; align-items: center; gap: 6px; }
+  .footer-links a.gh-link svg { width: 14px; height: 14px; fill: currentColor; }
 </style>
 </head>
 <body>
@@ -364,13 +415,16 @@
       <span class="brand-name">brk</span>
     </a>
     <nav class="nav-links">
-      <a href="#quickstart">快速开始</a>
-      <a href="#page">页面</a>
-      <a href="#design">设计取舍</a>
-      <a href="#sections">文档</a>
+      <a href="/guide/">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/">架构</a>
+      <a href="/recipes/">实战</a>
     </nav>
     <div class="nav-right">
       <span class="ver">v0.1 · 预览</span>
+      <a class="gh" href="https://github.com/zxmot/brk.zxmot.com" aria-label="GitHub" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
     </div>
   </div>
 </header>
@@ -378,19 +432,63 @@
 <!-- ============ HERO ============ -->
 <section class="hero">
   <div class="hero-inner">
-    <div class="hero-badge">
-      <span class="dot"></span>
-      核心 &lt; 10kb · 无虚拟 DOM · 零框架开销
+
+    <!-- LEFT -->
+    <div class="hero-left">
+      <div class="hero-badge">
+        <span class="dot"></span>
+        核心 &lt; 10kb · 无虚拟 DOM · 零框架开销
+      </div>
+      <h1 class="hero-title">brk</h1>
+      <p class="hero-sub">一个微前端的骨架。</p>
+      <p class="hero-lead">
+        不引入虚拟 DOM，不做 diff，不做状态管理。<br>
+        组件只渲染一次，更新由你掌控。
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="/guide/getting-started/">
+          快速开始
+          <span class="arr">→</span>
+        </a>
+        <a class="btn btn-ghost" href="https://github.com/zxmot/brk.zxmot.com" target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true" style="opacity:.75"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </div>
     </div>
-    <h1 class="hero-title">brk</h1>
-    <p class="hero-sub">一个微前端的骨架，不是一个框架。</p>
-    <p class="hero-lead">
-      组件只渲染一次，更新由你掌控。<br>
-      不做 diff、不做调度、不做状态管理 —— 只提供一套最小约定。
-    </p>
-    <div class="hero-actions">
-      <a class="btn btn-primary" href="#quickstart">快速开始 →</a>
-      <a class="btn btn-ghost" href="#design">设计取舍</a>
+
+    <!-- RIGHT -->
+    <div class="hero-code">
+
+      <div class="code">
+        <div class="code-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="code-title">index.html</span>
+        </div>
+        <pre><code><span class="t">&lt;script</span> <span class="a">src</span>=<span class="s">"/static/init.js"</span><span class="t">&gt;&lt;/script&gt;</span>
+<span class="t">&lt;script&gt;</span><span class="f">brk.render</span>({ <span class="a">load</span>: <span class="s">"/dist/page.mjs"</span> })<span class="t">&lt;/script&gt;</span></code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="code-title">page.tsx</span>
+        </div>
+        <pre><code><span class="k">const</span> <span class="f">vino</span> = () <span class="k">=&gt;</span> (
+  <span class="t">&lt;brk.card&gt;</span>
+    <span class="t">&lt;h1&gt;</span>Hello World<span class="t">&lt;/h1&gt;</span>
+    <span class="t">&lt;div</span> <span class="a">css</span>=<span class="s">"height: 1px; margin: 8px 0"</span><span class="t">/&gt;</span>
+    <span class="t">&lt;p</span> <span class="a">cls</span>=<span class="s">"muted"</span><span class="t">&gt;</span>可以开始使用 brk 了<span class="t">&lt;/p&gt;</span>
+  <span class="t">&lt;/brk.card&gt;</span>
+);
+
+<span class="k">export</span> <span class="k">const</span> page = { vino };</code></pre>
+        <div class="code-foot">
+          <span class="ok">✓</span>
+          <span>编译产物 ≈ 100% 是你的应用代码</span>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -415,95 +513,8 @@
   </div>
 </div>
 
-<!-- ============ QUICKSTART ============ -->
-<section class="section" id="quickstart">
-  <div class="section-inner">
-    <div class="section-head">
-      <span class="eyebrow">快速开始</span>
-      <h2>三行跑起来</h2>
-      <p>
-        <code style="font-family:var(--mono);font-size:13px;color:var(--accent)">init.js</code>
-        准备好 <code style="font-family:var(--mono);font-size:13px;color:var(--text)">window.jsx</code>
-        与 <code style="font-family:var(--mono);font-size:13px;color:var(--text)">globalThis._brk_</code>，
-        之后的每一页都只是一个普通的 ES 模块。
-      </p>
-    </div>
-
-    <div class="code" style="max-width:720px;">
-      <div class="code-bar">
-        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-        <span class="code-title">index.html</span>
-      </div>
-      <pre><code><span class="t">&lt;script</span> <span class="a">src</span>=<span class="s">"/static/init.js"</span><span class="t">&gt;&lt;/script&gt;</span>
-<span class="t">&lt;script&gt;</span><span class="f">brk.render</span>({ <span class="a">load</span>: <span class="s">"/dist/app/page.mjs"</span> })<span class="t">&lt;/script&gt;</span></code></pre>
-    </div>
-  </div>
-</section>
-
-<!-- ============ PAGE EXAMPLE ============ -->
-<section class="section" id="page" style="padding-top:0;">
-  <div class="section-inner">
-    <div class="section-head">
-      <span class="eyebrow">页面</span>
-      <h2>你的页面，几乎全是应用代码</h2>
-      <p>
-        用 esbuild 编译，<code style="font-family:var(--mono);font-size:13px;color:var(--accent)">format: 'esm'</code>。
-        框架运行时早已在 init.js 中就绪，页面产物里没有 loader、没有 diff。
-      </p>
-    </div>
-
-    <div class="split">
-      <div>
-        <div class="split-label"><b>// </b>page.tsx — 你写的</div>
-        <div class="code">
-          <div class="code-bar">
-            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-            <span class="code-title">page.tsx</span>
-          </div>
-          <pre><code><span class="k">import</span> { brk } <span class="k">from</span> <span class="s">'@/brk'</span>;
-
-<span class="k">const</span> <span class="f">vino</span> = () <span class="k">=&gt;</span> (
-  <span class="t">&lt;div</span> <span class="a">css</span>=<span class="s">"padding: 4px"</span><span class="t">&gt;</span>
-    <span class="t">&lt;brk.card&gt;</span>
-      <span class="t">&lt;h1&gt;</span>Hello World<span class="t">&lt;/h1&gt;</span>
-      <span class="t">&lt;div</span> <span class="a">cls</span>=<span class="s">"bge"</span> <span class="a">css</span>=<span class="s">"height: 1px; margin: 4px 0 8px"</span><span class="t">/&gt;</span>
-    <span class="t">&lt;/brk.card&gt;</span>
-  <span class="t">&lt;/div&gt;</span>
-);
-
-<span class="k">export</span> <span class="k">const</span> page = { vino };</code></pre>
-        </div>
-      </div>
-
-      <div>
-        <div class="split-label"><b>// </b>page.mjs — esbuild 编译产物</div>
-        <div class="code">
-          <div class="code-bar">
-            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-            <span class="code-title">page.mjs</span>
-          </div>
-          <pre><code><span class="k">import</span> { brk } <span class="k">from</span> <span class="s">'@/brk'</span>;
-<span class="c">// format: 'esm' · jsxFactory: jsx</span>
-
-<span class="k">const</span> <span class="f">vino</span> = () <span class="k">=&gt;</span> <span class="f">jsx</span>(<span class="s">"div"</span>, { <span class="a">css</span>: <span class="s">"padding: 4px"</span> },
-  <span class="f">jsx</span>(brk.card, {},
-    <span class="f">jsx</span>(<span class="s">"h1"</span>, {}, <span class="s">"Hello World"</span>),
-    <span class="f">jsx</span>(<span class="s">"div"</span>, {
-      <span class="a">cls</span>: <span class="s">"bge"</span>,
-      <span class="a">css</span>: <span class="s">"height: 1px; margin: 4px 0 8px"</span>
-    })
-  )
-);
-
-<span class="k">export</span> <span class="k">const</span> page = { vino };</code></pre>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- ============ DESIGN ============ -->
-<section class="section" id="design" style="padding-top:0;">
+<section class="section" id="design">
   <div class="section-inner">
     <div class="section-head">
       <span class="eyebrow">设计取舍</span>
@@ -515,22 +526,22 @@
       <div class="card">
         <div class="card-num">01</div>
         <h3>渲染一次</h3>
-        <p>组件函数只执行一次，DOM 只生成一次。没有 hooks，没有重渲染，<code style="font-family:var(--mono);font-size:12.5px">UI = f(state)</code> 由你自己维持。</p>
+        <p>组件函数只执行一次，DOM 只生成一次。没有 hooks，没有重渲染，<code>UI = f(state)</code> 由你自己维持。</p>
       </div>
       <div class="card">
         <div class="card-num">02</div>
         <h3>不做调度</h3>
-        <p>更新交给 <code style="font-family:var(--mono);font-size:12.5px">replaceChildren</code> 和 <code style="font-family:var(--mono);font-size:12.5px">textContent</code>，刷新粒度由你决定。框架不介入状态到 DOM 的同步。</p>
+        <p>更新交给 <code>replaceChildren</code> 和 <code>textContent</code>，刷新粒度由你决定。框架不介入状态到 DOM 的同步。</p>
       </div>
       <div class="card">
         <div class="card-num">03</div>
         <h3>全局能力</h3>
-        <p><code style="font-family:var(--mono);font-size:12.5px">init.js</code> 把 <code style="font-family:var(--mono);font-size:12.5px">jsx</code> 与 <code style="font-family:var(--mono);font-size:12.5px">globalThis._brk_</code> 一次性注入，页面产物里只有你的应用代码。</p>
+        <p><code>init.js</code> 把 <code>jsx</code> 与 <code>globalThis._brk_</code> 一次性注入，页面产物里只有你的应用代码。</p>
       </div>
       <div class="card">
         <div class="card-num">04</div>
         <h3>可整体替换</h3>
-        <p><code style="font-family:var(--mono);font-size:12.5px">init.js</code> 是源码不是黑盒。你可以覆盖 <code style="font-family:var(--mono);font-size:12.5px">brk.opens</code>，甚至重写整套运行时。</p>
+        <p><code>init.js</code> 是源码不是黑盒。你可以覆盖 <code>brk.opens</code>，甚至重写整套运行时。</p>
       </div>
     </div>
   </div>
@@ -573,50 +584,50 @@
     <div class="section-head">
       <span class="eyebrow">文档</span>
       <h2>板块</h2>
-      <p>骨架已经就位，下面每一块都会独立成页，逐步补齐。</p>
+      <p>指南已经完成。其他板块会陆续补齐——每个板块都会独立成页，逐步深入。</p>
     </div>
 
     <div class="grid-3">
 
-      <a class="sec-card" href="#">
-        <div class="ico">01 / guide</div>
+      <a class="sec-card featured" href="/guide/">
+        <div class="ico">01 / GUIDE</div>
         <h3>指南</h3>
-        <p>从 init.js 到第一个页面。讲清 JSX 语法、页面契约、渲染与更新、父子通信。</p>
-        <span class="tag wip">即将到来</span>
+        <p>从 init.js 到多页外壳。七章读完，你能独立写出一个完整的 brk 应用，并理解每个取舍背后的原因。</p>
+        <span class="tag ready">已完成 · 7 章</span>
       </a>
 
-      <a class="sec-card" href="#">
-        <div class="ico">02 / api</div>
+      <a class="sec-card" href="/api/">
+        <div class="ico">02 / API</div>
         <h3>API 参考</h3>
-        <p>brk 命名空间的完整说明：card、icon、opens、_load、_json、v、weak 等。</p>
+        <p>brk 命名空间的完整说明：card、icon、opens、_load、_open、_json、_post、_edit、v、weak。</p>
         <span class="tag wip">即将到来</span>
       </a>
 
-      <a class="sec-card" href="#">
-        <div class="ico">03 / architecture</div>
+      <a class="sec-card" href="/architecture/">
+        <div class="ico">03 / ARCHITECTURE</div>
         <h3>架构原理</h3>
-        <p>init.js 如何注入运行时、服务端引导、页面模块协议，以及为什么没有虚拟 DOM。</p>
+        <p>init.js 如何注入运行时、jsx() 函数如何将 JSX 转为真实 DOM、页面模块协议，以及为什么没有虚拟 DOM。</p>
         <span class="tag wip">即将到来</span>
       </a>
 
-      <a class="sec-card" href="#">
-        <div class="ico">04 / recipes</div>
+      <a class="sec-card" href="/recipes/">
+        <div class="ico">04 / RECIPES</div>
         <h3>实战配方</h3>
-        <p>微前端外壳、多页切换、锚点刷新、用你自己的 init/brk.js 完全替换框架。</p>
+        <p>微前端外壳、多页切换与状态保留、锚点刷新、用你自己的 init/brk.js 完全替换框架。</p>
         <span class="tag wip">即将到来</span>
       </a>
 
-      <a class="sec-card" href="#">
-        <div class="ico">05 / extensions</div>
+      <a class="sec-card" href="/extensions/">
+        <div class="ico">05 / EXTENSIONS</div>
         <h3>扩展机制</h3>
-        <p>以插件形式加载的组件库与 WebComponent 生态，同功能全局只加载一次。</p>
+        <p>以插件形式加载的组件库与 WebComponent 生态，以及"同功能全局只加载一次"的挂载协议。</p>
         <span class="tag wip">即将到来</span>
       </a>
 
-      <a class="sec-card" href="#">
-        <div class="ico">06 / compare</div>
+      <a class="sec-card" href="/compare/">
+        <div class="ico">06 / COMPARE</div>
         <h3>对比</h3>
-        <p>brk 与 React、Vue、qiankun 等方案的差异，以及各自适合的取舍。</p>
+        <p>brk 与 React、Vue、qiankun 等方案的差异，以及各自适合的取舍场景。</p>
         <span class="tag wip">即将到来</span>
       </a>
 
@@ -628,13 +639,17 @@
 <footer>
   <div class="footer-inner">
     <div class="brand">
-      <span class="brand-mark" style="width:20px;height:20px;font-size:12px;">b</span>
-      <span style="margin-left:8px;">brk — 一个微前端骨架</span>
+      <span class="brand-mark" style="width:20px;height:20px;font-size:12px;display:inline-grid;vertical-align:middle;">b</span>
+      <span style="margin-left:8px;">brk · 一个微前端骨架 · https://brk.zxmot.com/</span>
     </div>
     <div class="footer-links">
-      <a href="#quickstart">快速开始</a>
-      <a href="#design">设计取舍</a>
-      <a href="#sections">文档</a>
+      <a href="/guide/">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/">架构</a>
+      <a class="gh-link" href="https://github.com/zxmot/brk.zxmot.com" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
     </div>
   </div>
 </footer>

@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设计手记 — brk</title>
+<meta name="description" content="按对话顺序整理 brk 的设计与实现过程，保留双方原话与关键问答。">
+<style>
+  :root {
+    --bg:         #0a0b10;
+    --bg-soft:    #0e1017;
+    --surface:    #131722;
+    --surface-2:  #171b27;
+    --border:     #232838;
+    --border-soft:#1a1f2d;
+    --text:       #e7eaf2;
+    --text-dim:   #9aa3b8;
+    --text-dimmer:#5c6479;
+    --accent:     #5eead4;
+    --accent-2:   #60a5fa;
+    --accent-dim: rgba(94, 234, 212, 0.12);
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --radius: 12px;
+    --maxw: 1140px;
+    --prose: 780px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px; line-height: 1.65;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  /* NAV */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 11, 16, 0.72);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .nav-inner {
+    max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: 58px;
+    display: flex; align-items: center; gap: 32px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center;
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    color: #06121a; font-weight: 800; font-size: 15px; font-family: var(--mono);
+    box-shadow: 0 0 0 1px rgba(94,234,212,0.25), 0 6px 20px -6px rgba(94,234,212,0.5);
+  }
+  .brand-name { font-family: var(--mono); font-size: 16px; }
+  .nav-links { display: flex; gap: 26px; font-size: 14px; color: var(--text-dim); }
+  .nav-links a { transition: color .15s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-right { margin-left: auto; }
+  .ver {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    background: var(--accent-dim); border: 1px solid rgba(94,234,212,0.22);
+    padding: 3px 9px; border-radius: 999px;
+  }
+  @media (max-width: 720px) { .nav-links { display: none; } }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    padding: 68px 24px 44px;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .hero::before {
+    content: "";
+    position: absolute; inset: -30% -10% auto;
+    height: 600px;
+    background:
+      radial-gradient(560px 300px at 22% 20%, rgba(94,234,212,0.09), transparent 70%),
+      radial-gradient(500px 280px at 78% 30%, rgba(96,165,250,0.07), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-inner { position: relative; max-width: var(--maxw); margin: 0 auto; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 5px 13px; border-radius: 999px;
+    margin-bottom: 20px;
+  }
+  .hero-badge .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+  h1 {
+    margin: 0 0 12px;
+    font-size: clamp(34px, 5vw, 48px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    background: linear-gradient(180deg, #ffffff 20%, #97a3bb 130%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero-sub {
+    margin: 0 0 18px;
+    font-size: 17px; color: var(--text);
+    font-weight: 500;
+  }
+  .hero-lead {
+    margin: 0;
+    font-size: 15px; color: var(--text-dim);
+    line-height: 1.75;
+    max-width: 620px;
+  }
+  .hero-meta {
+    margin-top: 26px;
+    display: flex; gap: 24px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer);
+  }
+  .hero-meta b { color: var(--accent); font-weight: 500; }
+
+  /* TIMELINE */
+  .timeline {
+    max-width: var(--prose);
+    margin: 0 auto;
+    padding: 56px 24px 80px;
+    position: relative;
+  }
+
+  /* 每个回合 */
+  .turn {
+    position: relative;
+    margin-bottom: 52px;
+  }
+  .turn:last-of-type { margin-bottom: 0; }
+
+  .turn-idx {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--text-dimmer);
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .turn-idx .line {
+    flex: 1; height: 1px; background: var(--border-soft);
+  }
+
+  /* 用户发言 */
+  .say-user {
+    padding-left: 20px;
+    border-left: 2px solid var(--accent);
+    margin-bottom: 16px;
+    font-size: 15.5px;
+    line-height: 1.8;
+    color: #dbe1ee;
+  }
+  .say-user p { margin: 0 0 10px; }
+  .say-user p:last-child { margin-bottom: 0; }
+  .say-user code {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--accent); background: rgba(94,234,212,0.08);
+    padding: 1px 6px; border-radius: 5px;
+  }
+
+  /* 我的回应（压缩、次要） */
+  .say-ai {
+    padding-left: 20px;
+    border-left: 2px solid #2b3145;
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: var(--text-dim);
+    position: relative;
+  }
+  .say-ai::before {
+    content: "brk 文档助手";
+    display: block;
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--text-dimmer);
+    letter-spacing: 0.06em;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+  }
+  .say-ai p { margin: 0 0 8px; }
+  .say-ai p:last-child { margin-bottom: 0; }
+  .say-ai b { color: var(--text); font-weight: 500; }
+  .say-ai code {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--accent); background: rgba(94,234,212,0.06);
+    padding: 1px 5px; border-radius: 4px;
+  }
+
+  /* 引语里的代码块 */
+  .q-code {
+    margin: 12px 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--bg-soft);
+    overflow: hidden;
+  }
+  .q-code pre {
+    margin: 0; padding: 14px 16px;
+    font-family: var(--mono); font-size: 12.5px;
+    line-height: 1.7;
+    color: #c9d1e0;
+    overflow-x: auto;
+    tab-size: 2;
+  }
+  .q-code pre::-webkit-scrollbar { height: 8px; }
+  .q-code pre::-webkit-scrollbar-thumb { background: #2b3145; border-radius: 4px; }
+  .k { color: #ff7eb6; }
+  .f { color: #82c8ff; }
+  .s { color: #b8e986; }
+  .t { color: #5eead4; }
+  .a { color: #c4a7ff; }
+  .c { color: #5c6479; font-style: italic; }
+  .n { color: #ffd479; }
+
+  /* 结尾 */
+  .outro {
+    max-width: var(--prose);
+    margin: 0 auto 80px;
+    padding: 0 24px;
+  }
+  .outro-box {
+    padding: 26px 28px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  .outro-box p {
+    margin: 0; font-size: 14px; color: var(--text-dim);
+    line-height: 1.75;
+  }
+  .outro-box p + p { margin-top: 10px; }
+  .outro-box b { color: var(--text); font-weight: 500; }
+
+  /* FOOTER */
+  footer {
+    padding: 40px 24px 56px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--text-dimmer); font-size: 13px;
+  }
+  .footer-inner {
+    max-width: var(--maxw); margin: 0 auto;
+    display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+    align-items: center;
+  }
+  .footer-links { display: flex; gap: 22px; }
+  .footer-links a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark">b</span>
+      <span class="brand-name">brk</span>
+    </a>
+    <nav class="nav-links">
+      <a href="/guide/">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/">架构</a>
+      <a href="/recipes/">实战</a>
+    </nav>
+    <div class="nav-right">
+      <span class="ver">brk.zxmot.com</span>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <span class="dot"></span>
+      设计手记 · 按对话顺序整理
+    </div>
+    <h1>设计手记</h1>
+    <p class="hero-sub">brk 的设计与实现过程</p>
+    <p class="hero-lead">
+      这是 brk 从想法到上线的完整对话记录。按真实顺序排布，保留双方原话——
+      作者的原始表述一字未改，文档助手的回应压缩到一两句，只留"理解确认"与"关键提问"。<br>
+      如果这份记录能帮你更快理解 brk 的取舍，它就值得被写下来。
+    </p>
+    <div class="hero-meta">
+      <span><b>24</b> 个回合</span>
+      <span>从第一句需求到这一刻</span>
+      <span>原话未做改写</span>
+    </div>
+  </div>
+</section>
+
+<!-- TIMELINE -->
+<main class="timeline">
+
+  <!-- 01 -->
+  <article class="turn">
+    <div class="turn-idx"><span>01</span><span class="line"></span></div>
+    <div class="say-user">
+      我准备开源一个自己开发的微前端架构，帮我一步步做出来一个技术文档站，我会一点点告诉你技术细节，明白咱们现在的目标吗？是否有疑问
+    </div>
+    <div class="say-ai">
+      <p>明白。目标是做一个可开源、可维护的文档站。先对齐：项目名、技术栈、目标读者、部署方式？</p>
+    </div>
+  </article>
+
+  <!-- 02 -->
+  <article class="turn">
+    <div class="turn-idx"><span>02</span><span class="line"></span></div>
+    <div class="say-user">
+      <p>名字暂且叫 brk 吧，在没有正式发布前都可以斟酌，技术支持是 TypeScript；给你一个最简单的示例页面吧：</p>
+      <div class="q-code"><pre><span class="k">import</span> {brk} <span class="k">from</span> <span class="s">'@/brk'</span>;
+
+<span class="k">const</span> <span class="f">vino</span> = () =&gt; {
+    <span class="k">return</span>(
+        <span class="t">&lt;div</span> <span class="a">css</span>=<span class="s">'padding: 4px'</span><span class="t">&gt;</span>
+            <span class="t">&lt;brk.card&gt;</span>
+	            <span class="t">&lt;h1&gt;</span>Hello World<span class="t">&lt;/h1&gt;</span>
+	            <span class="t">&lt;div</span> <span class="a">cls</span>=<span class="s">"bge"</span> <span class="a">css</span>=<span class="s">"height: 1px; margin: 4px 0 8px"</span><span class="t">/&gt;</span>
+            <span class="t">&lt;/brk.card&gt;</span>
+        <span class="t">&lt;/div&gt;</span>
+    );
+}
+
+<span class="k">export</span> <span class="k">const</span> page = {
+	vino,
+};</pre></div>
+      <p>首先我魔改了 jsx 的标签，用 cls 表示 className，用 css 代替 style，用 clk 代替 onClick，因为这几个属性太频繁了，简短一点的表示更加优雅；其次我定义了页面结构，<code>export const page = { vino }</code> 这样就可以从其他页面异步加载这个页面了；对了你可能注意到 <code>&lt;brk.card&gt;&lt;/brk.card&gt;</code> 是一个内置且统一的卡片组件，也是因为太常用了。</p>
+    </div>
+    <div class="say-ai">
+      <p>收到。核心：<b>cls / css / clk 三个简写</b>、<b>page.vino 页面契约</b>、<b>brk.card 内置组件</b>。</p>
+      <p>三件事要弄清：JSX 怎么编译？css 落到哪个 DOM API？"微前端"体现在哪？</p>
+    </div>
+  </article>
+
+  <!-- 03 -->
+  <article class="turn">
+    <div class="turn-idx"><span>03</span><span class="line"></span></div>
+    <div class="say-user">
+      <p>A. 我是用 esbuild 来做编译 jsx 的，转化为类似于 <code>jsx("button", { cls: 'btn1', css: 'background: #369', clk: () =&gt; _exec("param") }, "一个按钮")</code> 的形式。</p>
+      <p>B. 我会将 <code>&lt;div css='字符串value'/&gt;</code> 翻译成 <code>div_element.setAttribute('style', css_value)</code>。</p>
+      <p>C. 约定的 page.vino 是写死的，因为还可以有 <code>export const page = { bare, card, vino }</code> 也可以导出部分视图，为什么叫 vino 是为了和 view 相似，但必须区分，因为 view 是一个太范化而有歧义的名字。</p>
+      <p>D. 这是重点，接下来我会慢慢 brk 内部的技术细节，包含了许多强大的功能。</p>
+    </div>
+    <div class="say-ai">
+      <p>清楚了。esbuild 只做标准转换，<b>jsx 函数是你手写的运行时</b>；css 走 setAttribute；vino 是固定约定名。</p>
+      <p>先问一个：<code>&lt;brk.card&gt;</code> 编译成字符串标签，还是 <code>jsx(brk.card, ...)</code> 这种成员访问？</p>
+    </div>
+  </article>
+
+  <!-- 04 -->
+  <article class="turn">
+    <div class="turn-idx"><span>04</span><span class="line"></span></div>
+    <div class="say-user">
+      <p>编译其实都是 esbuild 的功劳，我没有做太多配置，我主要配置的是 jsx 这个函数（将编译后的 jsx 转化为真实的 dom 结构）的实现是我手工写的；</p>
+      <p>另外目前是 // 方案2：brk 是值，编译期解析成员访问 <code>jsx(brk.card, { ... }, children)</code>；</p>
+      <p>还有目前 <code>export const page = { bare, card, vino }</code> 用的很少，主要还是 <code>export const page = { vino }</code> 就行。</p>
+      <p>还有没有其他问题，我要给你我的 brk 内部的技术细节定义了。</p>
+    </div>
+    <div class="say-ai">
+      <p>归档。jsx 是运行时代码，<code>&lt;brk.card&gt;</code> 走成员访问，编译期不做额外处理。</p>
+      <p>最后一个问题：jsx 运行在什么形态——纯浏览器运行时，还是需要配套构建 CLI？</p>
+    </div>
+  </article>
+
+  <!-- 05 -->
+  <article class="turn">
+    <div class="turn-idx"><span>05</span><span class="line"></span></div>
+    <div class="say-user">
+      <p>你猜对了，我的 jsx 是直接注册的 <code>window.jsx = (tag: string | Function, props?: any, ...childs: any[]) =&gt; { ... }</code>，然后下边是我对 brk 的类型定义：</p>
+      <div class="q-code"><pre><span class="k">type</span> FunctionComponent&lt;Props&gt; = (props: Props) =&gt; HTMLElement;
+
+<span class="k">interface</span> BasicProps {
+	cls?: <span class="k">string</span>;
+	css?: <span class="k">string</span>;
+	clk?: <span class="f">Function</span>;
+}
+
+<span class="k">interface</span> brk {
+	<span class="c">// 一个全局且统一的卡片组件</span>
+	card: <span class="f">FunctionComponent</span>&lt;BasicProps&gt;;
+	<span class="c">// 显示一个SVG图标</span>
+	icon: <span class="f">FunctionComponent</span>&lt;{ d: <span class="k">string</span>; c?: <span class="k">string</span>; styles?: <span class="k">object</span> }&gt;;
+
+	<span class="c">/** 打开一个任意的目标 */</span>
+	opens: (meta: <span class="k">any</span>) =&gt; <span class="k">any</span>;
+
+	<span class="c">// 网络请求相关的工具</span>
+	_json: (path: <span class="k">string</span>) =&gt; <span class="f">Promise</span>&lt;<span class="k">object</span>&gt;;
+	_post: (path: <span class="k">string</span>, body: <span class="k">object</span>) =&gt; <span class="f">Promise</span>&lt;<span class="k">object</span>&gt;;
+	_edit: (path: <span class="k">string</span>, body: <span class="k">object</span>) =&gt; <span class="f">Promise</span>&lt;<span class="k">object</span>&gt;;
+
+	<span class="c">// 加载一个异步组件，type=module</span>
+	_load: (src: <span class="k">string</span>) =&gt; <span class="f">Promise</span>&lt;<span class="k">any</span>&gt;;
+	<span class="c">// opens a regular link</span>
+	_open: (key: <span class="k">string</span>, target?: <span class="k">string</span>) =&gt; <span class="k">any</span>;
+
+	<span class="c">// global shared caches</span>
+	v: <span class="k">any</span>;
+
+	<span class="c">// 一个弱引用，key = html dom 实例</span>
+	weak: <span class="f">WeakMap</span>;
+}</pre></div>
+    </div>
+    <div class="say-ai">
+      <p>归档。<b>window.jsx 全局注册</b>；brk 命名空间包含 card / icon / opens / _load / _open / _json / _post / _edit / v / weak。</p>
+      <p>两个疑问：<code>brk.opens(meta)</code> 里的 meta 是什么形状？<code>icon</code> 用 <code>styles: object</code> 是有意区分还是历史遗留？</p>
+    </div>
+  </article>
+
+  <!-- 06 -->
+  <article class="turn">
+    <div class="turn-idx"><span>06</span><span class="line"></span></div>
+    <div class="say-user">
+      <p>你猜对了，我确实没有虚拟 DOM，而是直接根据状态变化重新生成新 DOM；降低复杂度，严格保证了 UI = f(state)，而不像 React 那样内部 hooks 乱飞，组件逻辑不断重复执行；</p>
+      <p>icon 用 styles 先不管，后边我会补充，主要是因为 svg 底层走的是 document.createElementNS 所以不太一样；</p>
+      <p>brk.opens 是重点，不同的环境实现不一样，但目前的功能定义是打开新页面；</p>
+      <p>现在我给你介绍一下架构设计，也就是我的初始网页结构是，首先一个 html 携带一个 /static/init.css 及 /static/init.js 初始化模板，将 window.jsx 和 window.brk 两个全局变量准备好；文件非常小，只有不到 10kb；所以我的这个库最重要的特征之一是轻量化；</p>
+      <p>然后紧接着 <code>&lt;script&gt;brk.render({"load":"/dist/project/module/page.mjs"})&lt;/script&gt;</code> 这段配置是服务器 Server Side Render 生成的；</p>
+      <p>对于网页环境，<code>brk.render = (meta) =&gt; brk._load(meta.load).then(v =&gt; { document.body.appendChild( v.page.vino({}) ) })</code></p>
+    </div>
+    <div class="say-ai">
+      <p>归档。没有虚拟 DOM，直出真实 DOM；init.js 一次性注入 window.jsx 和 globalThis._brk_；这是 <b>server-driven bootstrap</b>。</p>
+      <p>一个疑问：既然没有 vdom，状态变化后"重建的粒度"怎么界定？</p>
+    </div>
+  </article>
+
+  <!-- 07 -->
+  <article class="turn">
+    <div class="turn-idx"><span>07</span><span class="line"></span></div>
+    <div class="say-user">
+      <p>你说的对，我确实是 server-driven bootstrap；其次，最核心的问题，没错，前端组件最重要的永远是状态；</p>
+      <p>我这个库对提供的解决方案，就是不解决！让用户自己去 <code>div.replaceChildren()</code> 和 <code>div.textContent</code> 去更新 dom 和任何内容。</p>
+      <p>也就是说，我这个库，核心的是，只提供整体架构的语法糖，所以做到了体积这么小，但可扩展性强，我有很多扩展的功能和界面组件库。</p>
+      <p>针对你的问题，最简单的组件就是这样子：</p>
+      <div class="q-code"><pre><span class="k">const</span> <span class="f">PlayGround</span> = () =&gt; {
+	<span class="k">const</span> ref = {
+		counter: <span class="n">0</span>,
+	};
+
+	<span class="k">const</span> placeholder = (
+		<span class="t">&lt;div&gt;</span>
+			<span class="t">&lt;div&gt;</span>点击了 {ref.counter++} 次<span class="t">&lt;/div&gt;</span>
+		<span class="t">&lt;/div&gt;</span>
+	);
+
+	<span class="k">const</span> <span class="f">clicked</span> = () =&gt; {
+		placeholder.<span class="f">replaceChildren</span>((
+			<span class="t">&lt;div&gt;</span>点击了 {ref.counter++} 次<span class="t">&lt;/div&gt;</span>
+		));
+	};
+
+	<span class="k">return</span> (
+		<span class="t">&lt;div&gt;</span>
+			<span class="t">&lt;div&gt;</span>其他静态内容<span class="t">&lt;/div&gt;</span>
+			{placeholder}
+			<span class="t">&lt;button</span> <span class="a">clk</span>={clicked}<span class="t">&gt;</span>按钮<span class="t">&lt;/button&gt;</span>
+		<span class="t">&lt;/div&gt;</span>
+	);
+};</pre></div>
+    </div>
+    <div class="say-ai">
+      <p>核心定位记下了：<b>brk 不解决状态管理，只提供语法糖</b>。</p>
+      <p>注意两个隐含约定：DOM 节点可直接作为 children；"锚点 + replaceChildren"是官方更新姿势。</p>
+      <p>问：这种锚点模式是推荐裸写，还是会提供辅助 API？</p>
+    </div>
+  </article>
+
+  <!-- 08 -->
+  <article class="turn">
+    <div class="turn-idx"><span>08</span><span class="line"></span></div>
+    <div class="say-user">
+      <p>你知道我的 <code>import {brk} from '@/brk';</code> 这行代码里做了什么吗？除了由 TypeScript 来给 IDE 的类型提示，其实本质只有一行代码：</p>
+      <p><code>export const brk = globalThis._brk_ || {};</code></p>
+      <p>因此我的架构逻辑很简单，由提前编译好的独立的 /static/init.js 初始化模板，去初始化微前端的执行环境，主要就是 jsx 和 brk 变量啦，然后每个页面都以 esm/module 的格式 <code>export const page = { vino }</code> 这样每个页面编译出来的代码几乎全部 100% 是应用代码，基本无关框架的代码了。</p>
+    </div>
+    <div class="say-ai">
+      <p>归档。<b>@/brk 是类型壳，运行时真身是 globalThis._brk_</b>。页面产物几乎没有框架代码。</p>
+      <p>两个问题：<code>@/</code> 是 esbuild alias 还是 TS paths？同一个页面被打开两次时，vino 会重新执行还是复用？</p>
+    </div>
+  </article>
+
+  <!-- 09 -->
+  <article class="turn">
+    <div class="turn-idx"><span>09</span><span class="line"></span></div>
+    <div class="say-user">
+      <p>你讲到的是多页面问题，我的解决办法依然是不解决：由用户开发一个自定义的父页面（每个项目自定义一种页面挂载风格），这个页面留有 placeholder 用于挂在附带的子页面：</p>
+      <div class="q-code"><pre><span class="k">const</span> <span class="f">MultiplePagesApp</span> = () =&gt; {
+	<span class="k">const</span> pages = [{ name: <span class="s">'菜单页面一'</span>, load: <span class="s">'/dist/project/module/page1.mjs'</span> }, ...];
+
+	<span class="k">const</span> body = (
+		<span class="t">&lt;div</span> <span class="a">css</span>=<span class="s">"flex: 1; min-height: 80vh"</span><span class="t">/&gt;</span>
+	);
+
+	brk.<span class="f">opens</span> = (page) =&gt; brk.<span class="f">_load</span>(page.load).<span class="f">then</span>(v =&gt; {
+		body.<span class="f">replaceChildren</span>((
+			<span class="t">&lt;v.page.vino/&gt;</span>
+		));
+	});
+
+	<span class="k">return</span> (
+		<span class="t">&lt;div&gt;</span>
+			<span class="t">&lt;header&gt;&lt;h1&gt;</span>统一的应用部分<span class="t">&lt;/h1&gt;&lt;/header&gt;</span>
+			<span class="t">&lt;main</span> <span class="a">css</span>=<span class="s">"display: flex"</span><span class="t">&gt;</span>
+				<span class="t">&lt;menu</span> <span class="a">css</span>=<span class="s">"min-width: 240px;"</span><span class="t">&gt;</span>
+					{pages.<span class="f">map</span>(it =&gt; (
+						<span class="t">&lt;div</span> <span class="a">clk</span>={() =&gt; brk.<span class="f">opens</span>(it)}<span class="t">&gt;</span>
+							{it.name}
+						<span class="t">&lt;/div&gt;</span>
+					))}
+				<span class="t">&lt;/menu&gt;</span>
+				{body}
+			<span class="t">&lt;/main&gt;</span>
+			<span class="t">&lt;tail&gt;</span>© Hello World<span class="t">&lt;/tail&gt;</span>
+		<span class="t">&lt;/div&gt;</span>
+	);
+};</pre></div>
+    </div>
+    <div class="say-ai">
+      <p>归档。<b>brk 不做应用组装，只做应用组装的语法糖</b>。</p>
+      <p>注意 <code>&lt;v.page.vino/&gt;</code> 这种多级成员标签是运行时动态取组件。</p>
+      <p>问：<code>&lt;v.page.vino/&gt;</code> 是 esbuild 原生支持的吗？子页面 DOM 被丢弃后 weak 数据消失，是设计预期吗？</p>
+    </div>
+  </article>
+
+  <!-- 10 -->
+  <article class="turn">
+    <div class="turn-idx"><span>10</span><span class="line"></span></div>
+    <div class="say-user">
+      <p>1. 是的，初始化模板中的 <code>brk.opens = ()=&gt;{}</code> 是一个不会报错的空函数。</p>
+      <p>2. 肯定是支持的，组件返回数组（jsx() 内部有对应的 flatten 处理，甚至可以数组套数组）、<code>&lt;a.b.c.d/&gt;</code> 组件、设置 <code>&lt;data.list[0]/&gt;</code> 组件都支持，只有 <code>&lt;div/&gt;</code> 这种全小写字母且没有小数点（动态取子对象引用）才会被 document.createElement(tag) 渲染成原生的 HTMLElement，这些都是 esbuild 本身就支持的。</p>
+      <p>3. brk.weak 是特意设计的，因为 dom 会被主动挂载，消失是随着不受控的垃圾回收机制，这个控制不了，因此，如果 dom 存在就可以去尝试获取相关联的内部状态和组件方法，这个涉及到了又一个重点问题 —— 父组件如何调用子组件。</p>
+      <p>React 的思路是将回调函数设置为 props 传递给子组件，然后实时同步子组件的状态，还有用各种 ref 去传递方法，并且看起来是不鼓励调用子组件的方法，各种写法看起来好麻烦；</p>
+      <p>我的思路依旧是交给用户去处理，可以用 <code>brk.weak.set(dom, {state, handlers})</code>，也可以用：</p>
+      <div class="q-code"><pre><span class="k">const</span> ctx: <span class="k">any</span> = {}; <span class="c">// 把所有权交给子组件，去赋值</span>
+
+<span class="k">const</span> <span class="f">test</span> = () =&gt; {
+    <span class="c">// 在父组件里调用子组件的方法，和状态</span>
+    ctx.<span class="f">action_from_child</span>(ctx.state_from_child);
+}
+
+<span class="k">return</span>(
+    <span class="t">&lt;div&gt;</span> <span class="t">&lt;DemoChild</span> <span class="a">ctx</span>={ctx}<span class="t">/&gt;</span> <span class="t">&lt;/div&gt;</span>
+)</pre></div>
+    </div>
+    <div class="say-ai">
+      <p>归档。<b>brk.opens 默认空函数是设计而非偷懒</b>；标签解析规则完全交给 esbuild；<b>ctx 是双向交接</b>——父创建空对象，子往里挂状态和方法。</p>
+      <p>问：ctx 的有效期怎么界定？ctx 和 brk.weak 是二选一还是可以并用？</p>
+    </div>
+  </article>
+
+  <!-- 11 -->
+  <article class="turn">
+    <div class="turn-idx"><span>11</span><span class="line"></span></div>
+    <div class="say-user">
+      <p>我的重点是渲染一个组件永远只执行一次（ctx 对象的生命周期肯定是跟随父组件的，父组件没了子组件也就没了，子组件的销毁与重建是由父组件严格控制的），即生成一次 DOM 结构，内部的局部更新由这个组件自己去负责。</p>
+      <p>可以的，拉个目录吧，也不知道你听懂了没有，反正很琐碎，而且这还只是我这个框架的骨架。后边还有与 WebComponent 生态的互动等很多技术细节，框架主要提供思想和简单示例，以及自身融合最少的代码（永远小于 10kb），后期可以扩展，即通过 brk._load / 即 import() 去加载动态功能，然后挂载在 brk 上，供所有的页面去复用功能，达到同样功能只引入一次的目标。</p>
+    </div>
+    <div class="say-ai">
+      <p>听懂了——<b>brk 不做调度，组件只渲染一次，一切由用户显式掌控</b>。</p>
+      <p>给出目录树：guide / api / architecture / recipes / extensions / compare。下一步建议先定技术选型与首页风格。</p>
+    </div>
+  </article>
+
+  <!-- 12 -->
+  <article class="turn">
+    <div class="turn-idx"><span>12</span><span class="line"></span></div>
+    <div class="say-user">
+      markdown 太单调了，直接做成静态网页吧，我的思路是把每个板块都先做出来一个网页，然后再逐个深入补充细节页面；因此首先是首页 + 多个核心板块页；先写技术文档站的首页吧，然后把未完成的板块列出来，我会让你一步步生成板块页面
+    </div>
+    <div class="say-ai">
+      <p>首页已完成。深色 + 单主色，hero + 三行快速开始 + 设计取舍四卡 + 适用边界 + 板块导航。</p>
+    </div>
+  </article>
+
+  <!-- 13 -->
+  <article class="turn">
+    <div class="turn-idx"><span>13</span><span class="line"></span></div>
+    <div class="say-user">
+      可以，写指南板块页面吧
+    </div>
+    <div class="say-ai">
+      <p>指南落地页已完成。左 sidebar + 右内容，章节分入门 / 核心 / 进阶三组，配阅读路径卡片。</p>
+    </div>
+  </article>
+
+  <!-- 14 -->
+  <article class="turn">
+    <div class="turn-idx"><span>14</span><span class="line"></span></div>
+    <div class="say-user">
+      编号无所谓，不要阅读时长；好，现在开始写 01 快速开始吧
+    </div>
+    <div class="say-ai">
+      <p>01 快速开始已完成。五步：放置 init.js → 创建 @/brk.ts → 配置 esbuild → 写页面 → 挂载运行。</p>
+    </div>
+  </article>
+
+  <!-- 15 -->
+  <article class="turn">
+    <div class="turn-idx"><span>15</span><span class="line"></span></div>
+    <div class="say-user">
+      <p>没问题 jsxFragment 是对的，@ 目录跟随项目放到 src 目录下就行（这是用户自己偏好的问题），按照你目前的也没问题，把 brk.ts 直接放 src 即直接把 src 源码目录相当于 @ 目录。</p>
+      <p>另外，你的 <code>&lt;div class="tree" style="white-space: break-spaces;"&gt;</code> 忘记了换行样式，不过我帮你补上了；</p>
+      <p>还有，以后案例不要太刻板，我给你的代码都是最简单的思路，不要原封不动放网站上，可以灵活自己发挥丰富一些都没问题的：</p>
+      <div class="q-code"><pre>      <span class="t">&lt;h1&gt;</span>Hello World<span class="t">&lt;/h1&gt;</span>
+      <span class="t">&lt;div</span> <span class="a">cls</span>=<span class="s">"bge"</span> <span class="a">css</span>=<span class="s">"height: 1px; margin: 4px 0 8px"</span><span class="t">/&gt;</span>
+      <span class="t">&lt;div&gt;</span>可以开始使用brk了<span class="t">&lt;/div&gt;</span></pre></div>
+    </div>
+    <div class="say-ai">
+      <p>收到。今后示例会写得更丰满。02 设计哲学已完成。渲染一次 / 没有 vdom / 把调度权交还用户 / 骨架不是框架 / 代价与获得。</p>
+    </div>
+  </article>
+
+  <!-- 16 -->
+  <article class="turn">
+    <div class="turn-idx"><span>16</span><span class="line"></span></div>
+    <div class="say-user">
+      哈哈，我有网站了，名字就叫 brk，将部署在 Github Pages 使用自定义域名 brk.zxmot.com；……继续写 03 吧
+    </div>
+    <div class="say-ai">
+      <p>恭喜上线。03 JSX 语法已完成。三个简写 / 标签解析规则 / children 展开 / 三个常见错误。</p>
+    </div>
+  </article>
+
+  <!-- 17 -->
+  <article class="turn">
+    <div class="turn-idx"><span>17</span><span class="line"></span></div>
+    <div class="say-user">
+      嗯，继续
+    </div>
+    <div class="say-ai">
+      <p>04 页面契约已完成。page / vino 命名由来 / 运行时链路 / 多视图导出 / 为什么只留这一个约定。</p>
+    </div>
+  </article>
+
+  <!-- 18 -->
+  <article class="turn">
+    <div class="turn-idx"><span>18</span><span class="line"></span></div>
+    <div class="say-user">
+      OK 继续
+    </div>
+    <div class="say-ai">
+      <p>05 渲染与更新已完成。渲染一次的含义 / 三种更新模式 / DOM 内部状态保留 / 粒度选择。</p>
+    </div>
+  </article>
+
+  <!-- 19 -->
+  <article class="turn">
+    <div class="turn-idx"><span>19</span><span class="line"></span></div>
+    <div class="say-user">
+      继续
+    </div>
+    <div class="say-ai">
+      <p>06 父子通信已完成。ctx 三步机制 / 所有权模型 / 生命周期 / 与 React ref 对比 / 与 brk.weak 分工。</p>
+    </div>
+  </article>
+
+  <!-- 20 -->
+  <article class="turn">
+    <div class="turn-idx"><span>20</span><span class="line"></span></div>
+    <div class="say-user">
+      好，继续
+    </div>
+    <div class="say-ai">
+      <p>07 多页容器已完成。brk.opens 可覆盖 / 完整外壳示例 / 状态保留三策略 / 与 qiankun 类方案的取舍。</p>
+    </div>
+  </article>
+
+  <!-- 21 -->
+  <article class="turn">
+    <div class="turn-idx"><span>21</span><span class="line"></span></div>
+    <div class="say-user">
+      <p>先不做其他板块，我要先整理一下；不需要《先做一个构建 / 抽模板的脚本，把手写 HTML 收敛成模板 + 数据，让后续页面写得快、改得省》因为我坚信没有永远固定的东西，前端就是不断的复制重复，抽象模板是永远做不好的；</p>
+      <p>概览是待补状态？那就再搞一下概览吧</p>
+    </div>
+    <div class="say-ai">
+      <p>概览页已完成。全景图 + 三条阅读路径 + 章节卡片带"你拥有……" + 读完之后你会拥有这些 + 阅读前提。</p>
+    </div>
+  </article>
+
+  <!-- 22 -->
+  <article class="turn">
+    <div class="turn-idx"><span>22</span><span class="line"></span></div>
+    <div class="say-user">
+      重新写一下首页吧，并把路由导航写好，不要全写 # 号了(<code>&lt;a href="#"&gt;</code>)
+    </div>
+    <div class="say-ai">
+      <p>首页重写完成。hero 改为左文右码两栏布局，所有链接写真实路径，加 GitHub 入口，指南板块高亮为"已完成 · 7 章"。</p>
+    </div>
+  </article>
+
+  <!-- 23 -->
+  <article class="turn">
+    <div class="turn-idx"><span>23</span><span class="line"></span></div>
+    <div class="say-user">
+      你可以看到咱们的全部历史对话吗？将全部对话，其中，我说的话整理汇总一下，同样的做成一个网页，我要挂在网站上，这样别人也可以更好了解我这个技术及动机了
+    </div>
+    <div class="say-ai">
+      <p>设计手记 v1 已完成。10 个主题 + 40+ 段原话，只收录作者发言。</p>
+    </div>
+  </article>
+
+  <!-- 24 -->
+  <article class="turn">
+    <div class="turn-idx"><span>24</span><span class="line"></span></div>
+    <div class="say-user">
+      看了看，感觉没有你的反馈上下文，内容阅读起来有些突然，所以加上吧，但一定压缩你的回复不要篇幅太长哈，就按照咱们的真实对话顺序就行，这样就不会显得没头没脑，不需要强迫症纠结主题数量
+    </div>
+    <div class="say-ai">
+      <p>当前版本。按真实对话顺序，双方的话都在，回应压缩到 1–3 句。</p>
+    </div>
+  </article>
+
+</main>
+
+<!-- OUTRO -->
+<div class="outro">
+  <div class="outro-box">
+    <p><b>关于这份整理。</b> 所有对话按真实顺序排布，作者原话未做改写（仅标点与分句做最小整理），助手回应压缩为"理解确认 + 关键提问"两句以内。</p>
+    <p>这份记录到此为止——之后的每一次对话，都是它的续篇。</p>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div>brk · 一个微前端骨架 · brk.zxmot.com</div>
+    <div class="footer-links">
+      <a href="/guide/">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/">架构</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
