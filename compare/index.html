@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>对比 — brk</title>
+<meta name="description" content="brk 与 React、Vue、qiankun 的横向对比，以及各自的适用场景。">
+<style>
+  :root {
+    --bg:         #0a0b10;
+    --bg-soft:    #0e1017;
+    --surface:    #131722;
+    --surface-2:  #171b27;
+    --border:     #232838;
+    --border-soft:#1a1f2d;
+    --text:       #e7eaf2;
+    --text-dim:   #9aa3b8;
+    --text-dimmer:#5c6479;
+    --accent:     #5eead4;
+    --accent-2:   #60a5fa;
+    --accent-dim: rgba(94, 234, 212, 0.12);
+    --warn:       #ffd479;
+    --warn-dim:   rgba(255, 212, 121, 0.08);
+    --red:        #ff8a8a;
+    --blue:       #82c8ff;
+    --purple:     #c4a7ff;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --radius: 12px;
+    --maxw: 1200px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px; line-height: 1.65;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  /* NAV */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 11, 16, 0.72);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .nav-inner {
+    max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: 58px;
+    display: flex; align-items: center; gap: 32px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center;
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    color: #06121a; font-weight: 800; font-size: 15px; font-family: var(--mono);
+    box-shadow: 0 0 0 1px rgba(94,234,212,0.25), 0 6px 20px -6px rgba(94,234,212,0.5);
+  }
+  .brand-name { font-family: var(--mono); font-size: 16px; }
+  .nav-links { display: flex; gap: 26px; font-size: 14px; color: var(--text-dim); }
+  .nav-links a { transition: color .15s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--accent); }
+  .nav-right { margin-left: auto; }
+  .ver {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    background: var(--accent-dim); border: 1px solid rgba(94,234,212,0.22);
+    padding: 3px 9px; border-radius: 999px;
+  }
+  @media (max-width: 720px) { .nav-links { display: none; } }
+
+  /* LAYOUT */
+  .layout {
+    max-width: var(--maxw); margin: 0 auto;
+    padding: 40px 24px 80px;
+    display: grid; grid-template-columns: 220px 1fr; gap: 56px; align-items: start;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 24px; padding-top: 24px; }
+  }
+
+  /* SIDEBAR */
+  .side { position: sticky; top: 82px; }
+  @media (max-width: 900px) { .side { position: static; } }
+  .side-title {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 14px; padding-left: 12px;
+  }
+  .side-group {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dimmer); letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 14px 12px 6px;
+  }
+  .side-group:first-of-type { padding-top: 0; }
+  .side-list { list-style: none; margin: 0 0 8px; padding: 0; }
+  .side-list li { margin-bottom: 1px; }
+  .side-list a {
+    display: block; padding: 6px 12px; border-radius: 7px;
+    font-size: 13.5px; color: var(--text-dim);
+    border-left: 2px solid transparent;
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .side-list a:hover { color: var(--text); background: var(--surface); }
+  .side-list a.active {
+    color: var(--accent); background: var(--accent-dim); border-left-color: var(--accent);
+  }
+  .side-list a .num {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dimmer); margin-right: 8px;
+  }
+
+  /* CONTENT */
+  .crumb {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--text-dimmer); margin-bottom: 14px;
+  }
+  .crumb b { color: var(--accent); font-weight: 500; }
+  h1 {
+    margin: 0 0 14px;
+    font-size: clamp(30px, 4vw, 40px); font-weight: 700;
+    letter-spacing: -0.025em; line-height: 1.15;
+    background: linear-gradient(180deg, #ffffff 20%, #97a3bb 130%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .lede {
+    font-size: 16px; color: var(--text-dim);
+    max-width: 680px; margin: 0 0 40px; line-height: 1.75;
+  }
+  .lede b { color: var(--text); font-weight: 500; }
+
+  /* NOTICE */
+  .notice {
+    display: flex; gap: 14px;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    border-radius: 10px;
+    margin-bottom: 44px;
+  }
+  .notice .ic {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--accent); flex-shrink: 0; line-height: 1.65;
+  }
+  .notice p { margin: 0; font-size: 13.8px; color: var(--text-dim); }
+  .notice p + p { margin-top: 6px; }
+  .notice b { color: var(--text); font-weight: 500; }
+
+  /* GROUP */
+  .group { margin-bottom: 52px; }
+  .group:last-of-type { margin-bottom: 0; }
+  .group-head {
+    display: flex; align-items: baseline; gap: 12px;
+    margin-bottom: 18px;
+  }
+  .group-head .lbl {
+    font-size: 13px; font-weight: 600;
+    font-family: var(--mono); letter-spacing: 0.04em;
+    color: var(--text);
+  }
+  .group-head .hint {
+    font-size: 12.5px; color: var(--text-dimmer);
+  }
+  .group-head .line { flex: 1; height: 1px; background: var(--border-soft); }
+  @media (max-width: 640px) { .group-head .hint { display: none; } }
+
+  /* 大对比表 */
+  .bigtable {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--bg-soft);
+    overflow-x: auto;
+  }
+  .bigtable table {
+    width: 100%; border-collapse: collapse;
+    min-width: 860px;
+  }
+  .bigtable thead th {
+    text-align: left;
+    padding: 14px 18px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-soft);
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .bigtable thead th.brk-col {
+    color: var(--accent);
+    background: linear-gradient(180deg, rgba(94,234,212,0.08), var(--surface));
+    border-bottom-color: rgba(94,234,212,0.25);
+  }
+  .bigtable thead th .sub {
+    display: block;
+    font-size: 10px;
+    color: var(--text-dimmer);
+    margin-top: 2px;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    font-weight: 400;
+  }
+  .bigtable tbody td {
+    padding: 14px 18px;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+  }
+  .bigtable tbody tr:last-child td { border-bottom: none; }
+  .bigtable tbody td:first-child {
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .bigtable tbody td.brk-col {
+    background: rgba(94,234,212,0.03);
+    color: #dbe1ee;
+  }
+  .bigtable tbody tr:hover td { background: rgba(255,255,255,0.015); }
+  .bigtable tbody tr:hover td.brk-col { background: rgba(94,234,212,0.05); }
+  .bigtable code {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--accent); background: rgba(94,234,212,0.08);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  .bigtable .good { color: var(--accent); }
+  .bigtable .bad  { color: var(--text-dimmer); }
+  .bigtable .mid  { color: var(--text-dim); }
+
+  /* 对比卡片 */
+  .vs-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 900px) { .vs-grid { grid-template-columns: 1fr; } }
+
+  .vs-card {
+    display: block;
+    padding: 22px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color .15s, background .15s, transform .15s;
+  }
+  .vs-card:hover {
+    border-color: rgba(94,234,212,0.35);
+    background: var(--surface-2);
+    transform: translateY(-2px);
+  }
+  .vs-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .vs-vs {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .vs-vs .left { color: var(--accent); }
+  .vs-vs .right { color: var(--text); }
+  .vs-arrow {
+    color: var(--text-dimmer); font-family: var(--mono);
+    font-size: 13px;
+    transition: color .15s, transform .15s;
+  }
+  .vs-card:hover .vs-arrow { color: var(--accent); transform: translateX(3px); }
+  .vs-card h3 {
+    margin: 0 0 8px; font-size: 16px; font-weight: 600;
+    letter-spacing: -0.01em; color: var(--text);
+  }
+  .vs-card p {
+    margin: 0 0 14px; font-size: 13.5px;
+    color: var(--text-dim); line-height: 1.65;
+  }
+  .vs-tags {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+  }
+  .vs-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dimmer);
+    border: 1px solid var(--border);
+    padding: 2px 8px; border-radius: 999px;
+  }
+
+  /* 决策表 */
+  .decision {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--bg-soft);
+  }
+  .decision-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .decision-row:last-child { border-bottom: none; }
+  .decision-cell {
+    padding: 18px 22px;
+    font-size: 13.8px; line-height: 1.7;
+  }
+  .decision-cell:first-child {
+    border-right: 1px solid var(--border-soft);
+  }
+  .decision-cell .who {
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+  .decision-cell.choose-brk .who { color: var(--accent); }
+  .decision-cell.choose-other .who { color: var(--text-dimmer); }
+  .decision-cell .what {
+    color: var(--text-dim);
+  }
+  .decision-cell .what b { color: var(--text); font-weight: 500; }
+  .decision-head {
+    display: grid; grid-template-columns: 1fr 1fr;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .decision-head > div {
+    padding: 12px 22px;
+    font-family: var(--mono); font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .decision-head > div:first-child {
+    color: var(--accent);
+    border-right: 1px solid var(--border-soft);
+  }
+  .decision-head > div:last-child { color: var(--text-dimmer); }
+  @media (max-width: 640px) {
+    .decision-row,
+    .decision-head { grid-template-columns: 1fr; }
+    .decision-cell:first-child { border-right: none; border-bottom: 1px solid var(--border-soft); }
+    .decision-head > div:first-child { border-right: none; border-bottom: 1px solid var(--border-soft); }
+  }
+
+  /* 坦诚块 */
+  .honest {
+    margin-top: 52px;
+    padding: 26px 28px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warn);
+    background: var(--warn-dim);
+    border-radius: 10px;
+  }
+  .honest-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--warn); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 12px;
+  }
+  .honest h3 {
+    margin: 0 0 14px; font-size: 17px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .honest p {
+    margin: 0; font-size: 14px; color: var(--text-dim);
+    line-height: 1.75;
+  }
+  .honest p + p { margin-top: 10px; }
+  .honest b { color: var(--text); font-weight: 500; }
+
+  /* NEXT */
+  .next {
+    display: flex; justify-content: space-between;
+    align-items: center; gap: 16px;
+    padding-top: 28px; margin-top: 48px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .next-hint { font-size: 13px; color: var(--text-dimmer); font-family: var(--mono); }
+  .next-link {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 11px 20px;
+    border: 1px solid var(--border); background: var(--surface);
+    border-radius: 9px; font-size: 14px;
+    transition: border-color .15s, background .15s;
+  }
+  .next-link:hover { border-color: rgba(94,234,212,0.4); background: var(--surface-2); }
+  .next-link .k { font-family: var(--mono); font-size: 12px; color: var(--text-dimmer); }
+  .next-link .t { color: var(--text); }
+  .next-link .arrow { color: var(--accent); }
+
+  /* FOOTER */
+  footer {
+    padding: 40px 24px 56px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--text-dimmer); font-size: 13px;
+  }
+  .footer-inner {
+    max-width: var(--maxw); margin: 0 auto;
+    display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+    align-items: center;
+  }
+  .footer-links { display: flex; gap: 22px; }
+  .footer-links a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark">b</span>
+      <span class="brand-name">brk</span>
+    </a>
+    <nav class="nav-links">
+      <a href="/guide/">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/">架构</a>
+      <a href="/recipes/">实战</a>
+    </nav>
+    <div class="nav-right">
+      <span class="ver">brk.zxmot.com</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="side">
+    <div class="side-title">对比</div>
+
+    <div class="side-group">总览</div>
+    <ul class="side-list">
+      <li><a href="#"><span class="num">—</span>横向对比</a></li>
+    </ul>
+
+    <div class="side-group">逐个对比</div>
+    <ul class="side-list">
+      <li><a href="#"><span class="num">01</span>vs React</a></li>
+      <li><a href="#"><span class="num">02</span>vs Vue</a></li>
+      <li><a href="#"><span class="num">03</span>vs qiankun</a></li>
+    </ul>
+
+    <div class="side-group">决策</div>
+    <ul class="side-list">
+      <li><a href="#"><span class="num">—</span>什么时候选谁</a></li>
+    </ul>
+  </aside>
+
+  <!-- CONTENT -->
+  <main>
+    <div class="crumb">文档 / <b>对比</b></div>
+    <h1>对比</h1>
+    <p class="lede">
+      这一页不试图证明 brk 更好。它只做一件事：<b>把 brk 和主流方案的差异摊开</b>，
+      让你自己判断哪一套更适合手上的项目。<br>
+      如果读完之后你选了别的方案，这一页也完成了它的工作。
+    </p>
+
+    <!-- NOTICE -->
+    <div class="notice">
+      <div class="ic">//</div>
+      <div>
+        <p>对比是诚实的难点。brk 的体积优势、简洁模型是真实的；
+        但生态、工具链、社区支持上的差距也是真实的。</p>
+        <p>下面每一处"brk 更好"的结论，都会配上对应的代价。<b>没有免费的午餐。</b></p>
+      </div>
+    </div>
+
+    <!-- ========== 横向大表 ========== -->
+    <div class="group" id="table">
+      <div class="group-head">
+        <span class="lbl">// 横向对比</span>
+        <span class="hint">一张表看全</span>
+        <span class="line"></span>
+      </div>
+
+      <div class="bigtable">
+        <table>
+          <thead>
+            <tr>
+              <th>维度</th>
+              <th class="brk-col">brk<span class="sub">微前端骨架</span></th>
+              <th>React<span class="sub">UI 框架</span></th>
+              <th>Vue<span class="sub">UI 框架</span></th>
+              <th>qiankun<span class="sub">微前端框架</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>定位</td>
+              <td class="brk-col">渲染骨架</td>
+              <td>通用 UI 框架</td>
+              <td>通用 UI 框架</td>
+              <td>微前端运行时</td>
+            </tr>
+            <tr>
+              <td>运行时体积</td>
+              <td class="brk-col good">&lt; 10 kb</td>
+              <td class="bad">~ 140 kb</td>
+              <td class="mid">~ 34 kb</td>
+              <td class="bad">&gt; 100 kb</td>
+            </tr>
+            <tr>
+              <td>渲染模型</td>
+              <td class="brk-col">直接生成 DOM</td>
+              <td>虚拟 DOM + diff</td>
+              <td>虚拟 DOM + diff</td>
+              <td>宿主其他框架</td>
+            </tr>
+            <tr>
+              <td>组件执行次数</td>
+              <td class="brk-col good">1 次</td>
+              <td class="bad">每次状态变化</td>
+              <td class="mid">每次依赖变化</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>状态管理</td>
+              <td class="brk-col bad">不提供</td>
+              <td class="good">内置 + 生态</td>
+              <td class="good">内置响应式</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>更新粒度</td>
+              <td class="brk-col mid">用户手动决定</td>
+              <td>框架自动</td>
+              <td>框架自动</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>沙箱隔离</td>
+              <td class="brk-col bad">无</td>
+              <td>—</td>
+              <td>—</td>
+              <td class="good">JS + 样式</td>
+            </tr>
+            <tr>
+              <td>学习曲线</td>
+              <td class="brk-col good">低（就是 JS）</td>
+              <td class="mid">中</td>
+              <td class="mid">中</td>
+              <td class="bad">高</td>
+            </tr>
+            <tr>
+              <td>生态成熟度</td>
+              <td class="brk-col bad">从零开始</td>
+              <td class="good">极丰富</td>
+              <td class="good">丰富</td>
+              <td class="mid">中等</td>
+            </tr>
+            <tr>
+              <td>页面产物</td>
+              <td class="brk-col good">≈ 100% 业务代码</td>
+              <td class="bad">含框架 runtime</td>
+              <td class="bad">含框架 runtime</td>
+              <td class="bad">含沙箱代码</td>
+            </tr>
+            <tr>
+              <td>可替换性</td>
+              <td class="brk-col good">整体可换</td>
+              <td class="bad">困难</td>
+              <td class="bad">困难</td>
+              <td class="bad">困难</td>
+            </tr>
+            <tr>
+              <td>适用场景</td>
+              <td class="brk-col">同团队 · 同栈 · 页面组织</td>
+              <td>通用 UI · 组件化</td>
+              <td>通用 UI · 渐进增强</td>
+              <td>多团队 · 独立部署</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== 逐个对比 ========== -->
+    <div class="group">
+      <div class="group-head">
+        <span class="lbl">// 逐个对比</span>
+        <span class="hint">为什么不同，而不是谁更好</span>
+        <span class="line"></span>
+      </div>
+
+      <div class="vs-grid">
+
+        <a class="vs-card" href="#">
+          <div class="vs-top">
+            <span class="vs-vs">
+              <span class="left">brk</span>
+              <span>vs</span>
+              <span class="right">React</span>
+            </span>
+            <span class="vs-arrow">→</span>
+          </div>
+          <h3>不是更小的 React</h3>
+          <p>最容易被误解的一组。brk 和 React 的差别不在体积，而在<b>组件执行模型</b>——React 反复执行函数，brk 只执行一次。</p>
+          <div class="vs-tags">
+            <span class="vs-tag">渲染模型</span>
+            <span class="vs-tag">hooks 取舍</span>
+            <span class="vs-tag">ref vs ctx</span>
+          </div>
+        </a>
+
+        <a class="vs-card" href="#">
+          <div class="vs-top">
+            <span class="vs-vs">
+              <span class="left">brk</span>
+              <span>vs</span>
+              <span class="right">Vue</span>
+            </span>
+            <span class="vs-arrow">→</span>
+          </div>
+          <h3>放弃响应式之后</h3>
+          <p>Vue 的核心是响应式系统，brk 主动放弃它。换来的是更小的体积、更少的隐式依赖，以及需要自己管的更新。</p>
+          <div class="vs-tags">
+            <span class="vs-tag">响应式</span>
+            <span class="vs-tag">SFC</span>
+            <span class="vs-tag">心智模型</span>
+          </div>
+        </a>
+
+        <a class="vs-card" href="#">
+          <div class="vs-top">
+            <span class="vs-vs">
+              <span class="left">brk</span>
+              <span>vs</span>
+              <span class="right">qiankun</span>
+            </span>
+            <span class="vs-arrow">→</span>
+          </div>
+          <h3>两种"微前端"</h3>
+          <p>名字最像的一组，实际解决的场景却几乎不重叠。qiankun 解决"多团队、独立部署、强隔离"；brk 解决"同团队、同栈、页面组织"。</p>
+          <div class="vs-tags">
+            <span class="vs-tag">沙箱</span>
+            <span class="vs-tag">隔离</span>
+            <span class="vs-tag">适用场景</span>
+          </div>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- ========== 决策 ========== -->
+    <div class="group">
+      <div class="group-head">
+        <span class="lbl">// 什么时候选谁</span>
+        <span class="hint">按场景，不按优劣</span>
+        <span class="line"></span>
+      </div>
+
+      <div class="decision">
+        <div class="decision-head">
+          <div>// 选 brk</div>
+          <div>// 选别的</div>
+        </div>
+
+        <div class="decision-row">
+          <div class="decision-cell choose-brk">
+            <div class="who">你认同「渲染一次」这个模型</div>
+            <div class="what">你的组件在生命周期内不需要重渲染，更新逻辑你愿意自己写。</div>
+          </div>
+          <div class="decision-cell choose-other">
+            <div class="who">你希望组件自动响应状态</div>
+            <div class="what">数据变了，DOM 就应该变——这是 React / Vue / Svelte 的强项。</div>
+          </div>
+        </div>
+
+        <div class="decision-row">
+          <div class="decision-cell choose-brk">
+            <div class="who">你对页面体积敏感</div>
+            <div class="what">希望页面产物里没有框架 runtime，加载即执行。</div>
+          </div>
+          <div class="decision-cell choose-other">
+            <div class="who">你希望开箱即用</div>
+            <div class="what">组件库、路由、表单、状态、SSR——希望有一整套官方方案，而不是自己搭。</div>
+          </div>
+        </div>
+
+        <div class="decision-row">
+          <div class="decision-cell choose-brk">
+            <div class="who">你在组织页面，而不是重写框架</div>
+            <div class="what">项目需要的是"一套干净的多页结构"，而不是"另一套 UI 开发范式"。</div>
+          </div>
+          <div class="decision-cell choose-other">
+            <div class="who">你要做组件化 UI 系统</div>
+            <div class="what">复杂交互、状态共享、动态表单、动画编排——这些场景 React / Vue 更成熟。</div>
+          </div>
+        </div>
+
+        <div class="decision-row">
+          <div class="decision-cell choose-brk">
+            <div class="who">团队少、栈统一、想自己掌控</div>
+            <div class="what">你愿意为精确控制多写几行代码，而不是被抽象层罩住。</div>
+          </div>
+          <div class="decision-cell choose-other">
+            <div class="who">多团队、异构栈、独立部署</div>
+            <div class="what">需要沙箱、需要隔离、需要各自升级不互相影响——qiankun / Module Federation 更合适。</div>
+          </div>
+        </div>
+
+        <div class="decision-row">
+          <div class="decision-cell choose-brk">
+            <div class="who">你想要一个骨架，不是框架</div>
+            <div class="what">init.js 是源码，可以整体替换，改得动、看得穿。</div>
+          </div>
+          <div class="decision-cell choose-other">
+            <div class="who">你不想看到框架源码</div>
+            <div class="what">希望框架是黑盒，稳定可靠、长期有人维护、有商业支持。</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ========== 坦诚块 ========== -->
+    <div class="honest">
+      <div class="honest-tag">// 坦率地说</div>
+      <h3>brk 不是大多数项目的正确选择</h3>
+      <p>
+        对绝大多数团队、绝大多数项目而言，<b>React / Vue 是更安全的选择</b>——
+        生态、招聘、工具链、社区答案、长期维护，都是 brk 无法比拟的。
+      </p>
+      <p>
+        brk 面向的是一个很窄的场景：<b>一个小团队，用同一套技术栈，需要一个干净的多页骨架，
+        并且愿意为"精确掌控"承担更多手工活。</b>
+      </p>
+      <p>
+        如果你不属于这个场景，这一页的对比不是用来"说服你"的，而是用来"帮你快速排除"的。
+        排除得越快，你省下的时间越多。
+      </p>
+    </div>
+
+    <!-- NEXT -->
+    <div class="next">
+      <div class="next-hint">// 也可以先看看</div>
+      <a class="next-link" href="/guide/">
+        <span class="k">01</span>
+        <span class="t">回到指南</span>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div>brk — 一个微前端骨架 · brk.zxmot.com</div>
+    <div class="footer-links">
+      <a href="/guide/">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/">架构</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

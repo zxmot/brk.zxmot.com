@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>架构原理 — brk</title>
+<meta name="description" content="brk 的架构原理：init.js、jsx() 运行时、页面模块协议，以及为什么它必须小于 10kb。">
+<style>
+  :root {
+    --bg:         #0a0b10;
+    --bg-soft:    #0e1017;
+    --surface:    #131722;
+    --surface-2:  #171b27;
+    --border:     #232838;
+    --border-soft:#1a1f2d;
+    --text:       #e7eaf2;
+    --text-dim:   #9aa3b8;
+    --text-dimmer:#5c6479;
+    --accent:     #5eead4;
+    --accent-2:   #60a5fa;
+    --accent-dim: rgba(94, 234, 212, 0.12);
+    --warn:       #ffd479;
+    --warn-dim:   rgba(255, 212, 121, 0.08);
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --radius: 12px;
+    --maxw: 1200px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px; line-height: 1.65;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  /* NAV */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 11, 16, 0.72);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .nav-inner {
+    max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: 58px;
+    display: flex; align-items: center; gap: 32px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center;
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    color: #06121a; font-weight: 800; font-size: 15px; font-family: var(--mono);
+    box-shadow: 0 0 0 1px rgba(94,234,212,0.25), 0 6px 20px -6px rgba(94,234,212,0.5);
+  }
+  .brand-name { font-family: var(--mono); font-size: 16px; }
+  .nav-links { display: flex; gap: 26px; font-size: 14px; color: var(--text-dim); }
+  .nav-links a { transition: color .15s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--accent); }
+  .nav-right { margin-left: auto; }
+  .ver {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    background: var(--accent-dim); border: 1px solid rgba(94,234,212,0.22);
+    padding: 3px 9px; border-radius: 999px;
+  }
+  @media (max-width: 720px) { .nav-links { display: none; } }
+
+  /* LAYOUT */
+  .layout {
+    max-width: var(--maxw); margin: 0 auto;
+    padding: 40px 24px 80px;
+    display: grid; grid-template-columns: 220px 1fr; gap: 56px; align-items: start;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 24px; padding-top: 24px; }
+  }
+
+  /* SIDEBAR */
+  .side { position: sticky; top: 82px; }
+  @media (max-width: 900px) { .side { position: static; } }
+  .side-title {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 14px; padding-left: 12px;
+  }
+  .side-group {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dimmer); letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 14px 12px 6px;
+  }
+  .side-group:first-of-type { padding-top: 0; }
+  .side-list { list-style: none; margin: 0 0 8px; padding: 0; }
+  .side-list li { margin-bottom: 1px; }
+  .side-list a {
+    display: block; padding: 6px 12px; border-radius: 7px;
+    font-size: 13.5px; color: var(--text-dim);
+    border-left: 2px solid transparent;
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .side-list a:hover { color: var(--text); background: var(--surface); }
+  .side-list a.active {
+    color: var(--accent); background: var(--accent-dim); border-left-color: var(--accent);
+  }
+  .side-list a .num {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dimmer); margin-right: 8px;
+  }
+
+  /* CONTENT */
+  .crumb {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--text-dimmer); margin-bottom: 14px;
+  }
+  .crumb b { color: var(--accent); font-weight: 500; }
+  h1 {
+    margin: 0 0 14px;
+    font-size: clamp(30px, 4vw, 40px); font-weight: 700;
+    letter-spacing: -0.025em; line-height: 1.15;
+    background: linear-gradient(180deg, #ffffff 20%, #97a3bb 130%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .lede {
+    font-size: 16px; color: var(--text-dim);
+    max-width: 680px; margin: 0 0 40px; line-height: 1.75;
+  }
+
+  /* ARCH 全景图 */
+  .arch {
+    border: 1px solid var(--border);
+    background: var(--bg-soft);
+    border-radius: var(--radius);
+    padding: 22px;
+    margin-bottom: 46px;
+    overflow-x: auto;
+  }
+  .arch-inner {
+    display: flex; flex-direction: column; gap: 0;
+    min-width: 520px;
+  }
+  .arch-layer {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 14px 18px;
+    position: relative;
+  }
+  .arch-layer.accent {
+    border-color: rgba(94,234,212,0.35);
+    background: linear-gradient(160deg, rgba(94,234,212,0.06), var(--surface) 60%);
+  }
+  .arch-layer.dim {
+    border-style: dashed;
+    background: var(--bg);
+    opacity: 0.85;
+  }
+  .arch-label {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--text-dimmer); letter-spacing: 0.06em;
+    text-transform: uppercase;
+    position: absolute; top: -8px; left: 14px;
+    background: var(--bg-soft);
+    padding: 0 6px;
+  }
+  .arch-layer.accent .arch-label { background: var(--surface); }
+  .arch-file {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--text); font-weight: 500;
+  }
+  .arch-file .hl { color: var(--accent); }
+  .arch-sub {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--text-dimmer); margin-top: 6px;
+    line-height: 1.8;
+  }
+  .arch-sub .ar { color: var(--accent); }
+  .arch-arrow {
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer);
+    padding: 10px 0;
+    gap: 8px;
+  }
+  .arch-arrow .lbl {
+    color: var(--accent);
+    background: var(--bg-soft);
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 11.5px;
+  }
+
+  /* 章节 */
+  .group { margin-bottom: 46px; }
+  .group:last-of-type { margin-bottom: 0; }
+  .group-head {
+    display: flex; align-items: baseline; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .group-head .lbl {
+    font-size: 13px; font-weight: 600;
+    font-family: var(--mono); letter-spacing: 0.04em;
+    color: var(--text);
+  }
+  .group-head .hint {
+    font-size: 12.5px; color: var(--text-dimmer);
+  }
+  .group-head .line { flex: 1; height: 1px; background: var(--border-soft); }
+  @media (max-width: 640px) { .group-head .hint { display: none; } }
+
+  .chapters {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 720px) { .chapters { grid-template-columns: 1fr; } }
+  .ch {
+    display: block;
+    padding: 22px 22px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color .15s, background .15s, transform .15s;
+  }
+  .ch:hover {
+    border-color: rgba(94,234,212,0.35);
+    background: var(--surface-2);
+    transform: translateY(-2px);
+  }
+  .ch-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .ch-num {
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--text-dimmer); letter-spacing: 0.04em;
+  }
+  .ch-arrow {
+    color: var(--text-dimmer); font-family: var(--mono);
+    font-size: 13px;
+    transition: color .15s, transform .15s;
+  }
+  .ch:hover .ch-arrow { color: var(--accent); transform: translateX(3px); }
+  .ch h3 {
+    margin: 0 0 8px; font-size: 16px; font-weight: 600;
+    letter-spacing: -0.01em; color: var(--text);
+  }
+  .ch p {
+    margin: 0 0 14px; font-size: 13.5px;
+    color: var(--text-dim); line-height: 1.6;
+  }
+  .ch-q {
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+    font-size: 12.8px;
+    color: var(--text-dimmer);
+    font-family: var(--mono);
+    line-height: 1.6;
+  }
+  .ch-q::before {
+    content: "Q ";
+    color: var(--accent);
+  }
+
+  /* 边界 */
+  .boundary {
+    margin-top: 52px;
+    padding: 26px 28px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warn);
+    background: var(--warn-dim);
+    border-radius: 10px;
+  }
+  .boundary-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--warn); letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .boundary h3 {
+    margin: 0 0 12px; font-size: 17px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .boundary p {
+    margin: 0; font-size: 14px; color: var(--text-dim);
+    line-height: 1.75;
+  }
+  .boundary p + p { margin-top: 10px; }
+  .boundary b { color: var(--text); font-weight: 500; }
+
+  /* NEXT */
+  .next {
+    display: flex; justify-content: space-between;
+    align-items: center; gap: 16px;
+    padding-top: 28px; margin-top: 48px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .next-hint { font-size: 13px; color: var(--text-dimmer); font-family: var(--mono); }
+  .next-link {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 11px 20px;
+    border: 1px solid var(--border); background: var(--surface);
+    border-radius: 9px; font-size: 14px;
+    transition: border-color .15s, background .15s;
+  }
+  .next-link:hover { border-color: rgba(94,234,212,0.4); background: var(--surface-2); }
+  .next-link .k { font-family: var(--mono); font-size: 12px; color: var(--text-dimmer); }
+  .next-link .t { color: var(--text); }
+  .next-link .arrow { color: var(--accent); }
+
+  /* FOOTER */
+  footer {
+    padding: 40px 24px 56px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--text-dimmer); font-size: 13px;
+  }
+  .footer-inner {
+    max-width: var(--maxw); margin: 0 auto;
+    display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+    align-items: center;
+  }
+  .footer-links { display: flex; gap: 22px; }
+  .footer-links a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark">b</span>
+      <span class="brand-name">brk</span>
+    </a>
+    <nav class="nav-links">
+      <a href="/guide/">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/" class="active">架构</a>
+      <a href="/recipes/">实战</a>
+    </nav>
+    <div class="nav-right">
+      <span class="ver">brk.zxmot.com</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="side">
+    <div class="side-title">架构原理</div>
+
+    <div class="side-group">运行时</div>
+    <ul class="side-list">
+      <li><a href="#"><span class="num">01</span>init 运行时</a></li>
+      <li><a href="#"><span class="num">02</span>jsx() 函数</a></li>
+      <li><a href="#"><span class="num">03</span>类型壳 @/brk</a></li>
+    </ul>
+
+    <div class="side-group">协议</div>
+    <ul class="side-list">
+      <li><a href="#"><span class="num">04</span>服务端引导</a></li>
+      <li><a href="#"><span class="num">05</span>页面模块协议</a></li>
+    </ul>
+
+    <div class="side-group">权衡</div>
+    <ul class="side-list">
+      <li><a href="#"><span class="num">06</span>为什么没有 vdom</a></li>
+      <li><a href="#"><span class="num">07</span>10kb 的体积预算</a></li>
+      <li><a href="#"><span class="num">08</span>可整体替换</a></li>
+    </ul>
+  </aside>
+
+  <!-- CONTENT -->
+  <main>
+    <div class="crumb">文档 / <b>架构原理</b></div>
+    <h1>架构原理</h1>
+    <p class="lede">
+      这一板块不讲"怎么用"，讲"怎么运作"。从 <code style="font-family:var(--mono);font-size:14px;color:var(--accent)">init.js</code>
+      注入运行时开始，到 <code style="font-family:var(--mono);font-size:14px;color:var(--accent)">vino()</code>
+      返回真实 DOM 结束——中间发生了什么，以及为什么这样设计。
+    </p>
+
+    <!-- ARCH 全景图 -->
+    <div class="arch">
+      <div class="arch-inner">
+
+        <div class="arch-layer">
+          <span class="arch-label">index.html</span>
+          <div class="arch-file"><span class="hl">/static/init.css</span></div>
+          <div class="arch-file"><span class="hl">/static/init.js</span></div>
+          <div class="arch-sub">
+            <span class="ar">└─</span> <span class="hl">window.jsx</span> = (tag, props, ...childs) =&gt; HTMLElement<br>
+            <span class="ar">└─</span> <span class="hl">globalThis._brk_</span> = { card, icon, opens, _load, ... }
+          </div>
+        </div>
+
+        <div class="arch-arrow">
+          <span>↓</span>
+          <span class="lbl">&lt;script&gt;brk.render({ load: ... })&lt;/script&gt;</span>
+          <span>↓</span>
+        </div>
+
+        <div class="arch-layer accent">
+          <span class="arch-label">page.mjs</span>
+          <div class="arch-file">export const page = { <span class="hl">vino</span> }</div>
+          <div class="arch-sub">
+            <span class="ar">└─</span> ESM 模块，由 <span class="hl">brk._load</span> 动态 import()<br>
+            <span class="ar">└─</span> 编译产物 ≈ 100% 应用代码
+          </div>
+        </div>
+
+        <div class="arch-arrow">
+          <span>↓</span>
+          <span class="lbl">brk._load(meta.load).then(v =&gt; ...)</span>
+          <span>↓</span>
+        </div>
+
+        <div class="arch-layer">
+          <span class="arch-label">document</span>
+          <div class="arch-file">document.body.appendChild( <span class="hl">v.page.vino({})</span> )</div>
+          <div class="arch-sub">
+            <span class="ar">└─</span> vino() 返回一个 HTMLElement<br>
+            <span class="ar">└─</span> 之后的一切更新，由页面自己负责
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- GROUP 1 运行时 -->
+    <div class="group">
+      <div class="group-head">
+        <span class="lbl">// 运行时</span>
+        <span class="hint">框架真正干活的三块</span>
+        <span class="line"></span>
+      </div>
+      <div class="chapters">
+
+        <a class="ch" href="#">
+          <div class="ch-top">
+            <span class="ch-num">01 / INIT RUNTIME</span>
+            <span class="ch-arrow">→</span>
+          </div>
+          <h3>init 运行时</h3>
+          <p>init.js 如何把 window.jsx 与 globalThis._brk_ 一次性注入，如何保证这一切在页面代码执行之前就绪。</p>
+          <div class="ch-q">整个运行时为什么能小于 10kb？</div>
+        </a>
+
+        <a class="ch" href="#">
+          <div class="ch-top">
+            <span class="ch-num">02 / JSX RUNTIME</span>
+            <span class="ch-arrow">→</span>
+          </div>
+          <h3>jsx() 函数</h3>
+          <p>手写的运行时核心。标签分派规则、cls / css / clk 的 DOM 映射、children 的深度展开，全在这一层。</p>
+          <div class="ch-q">jsx() 怎么区分原生标签和组件？</div>
+        </a>
+
+        <a class="ch" href="#">
+          <div class="ch-top">
+            <span class="ch-num">03 / TYPE SHELL</span>
+            <span class="ch-arrow">→</span>
+          </div>
+          <h3>类型壳 @/brk</h3>
+          <p>@/brk 是运行时的一行空壳 + 完整的类型定义。为什么这么设计，以及 TypeScript 是如何参与进来的。</p>
+          <div class="ch-q">为什么 import 的不是真模块？</div>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- GROUP 2 协议 -->
+    <div class="group">
+      <div class="group-head">
+        <span class="lbl">// 协议</span>
+        <span class="hint">服务端与浏览器之间的两份约定</span>
+        <span class="line"></span>
+      </div>
+      <div class="chapters">
+
+        <a class="ch" href="#">
+          <div class="ch-top">
+            <span class="ch-num">04 / SERVER BOOTSTRAP</span>
+            <span class="ch-arrow">→</span>
+          </div>
+          <h3>服务端引导</h3>
+          <p>服务端不产 HTML，只产一段引导配置。这是 server-driven bootstrap 与 SSR 的根本区别。</p>
+          <div class="ch-q">没有内容直出，首屏为什么还快？</div>
+        </a>
+
+        <a class="ch" href="#">
+          <div class="ch-top">
+            <span class="ch-num">05 / MODULE PROTOCOL</span>
+            <span class="ch-arrow">→</span>
+          </div>
+          <h3>页面模块协议</h3>
+          <p>page.mjs 模块的完整契约：必须是 ESM、必须导出一个 page 对象、必须含 vino。协议之外什么都不要求。</p>
+          <div class="ch-q">一个模块能被加载几次？</div>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- GROUP 3 权衡 -->
+    <div class="group">
+      <div class="group-head">
+        <span class="lbl">// 权衡</span>
+        <span class="hint">三个决定，构成了 brk 的全部形态</span>
+        <span class="line"></span>
+      </div>
+      <div class="chapters">
+
+        <a class="ch" href="#">
+          <div class="ch-top">
+            <span class="ch-num">06 / NO VDOM</span>
+            <span class="ch-arrow">→</span>
+          </div>
+          <h3>为什么没有 vdom</h3>
+          <p>跳过虚拟 DOM 与 diff 之后，复杂度从哪里来、到哪里去。以及哪些能力是被有意放弃的。</p>
+          <div class="ch-q">没有 diff，更新靠什么？</div>
+        </a>
+
+        <a class="ch" href="#">
+          <div class="ch-top">
+            <span class="ch-num">07 / SIZE BUDGET</span>
+            <span class="ch-arrow">→</span>
+          </div>
+          <h3>10kb 的体积预算</h3>
+          <p>"小于 10kb"不是结果，是前提。它决定了哪些能力可以进核心，哪些必须外挂。</p>
+          <div class="ch-q">为什么恰好是 10kb？</div>
+        </a>
+
+        <a class="ch" href="#">
+          <div class="ch-top">
+            <span class="ch-num">08 / REPLACEABLE</span>
+            <span class="ch-arrow">→</span>
+          </div>
+          <h3>可整体替换</h3>
+          <p>init.js 是源码，不是黑盒。你可以覆盖 brk.opens，也可以重写整套运行时——协议不变，一切都能换。</p>
+          <div class="ch-q">替换掉之后 brk 还叫 brk 吗？</div>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- 边界 -->
+    <div class="boundary">
+      <div class="boundary-tag">// 阅读前提</div>
+      <h3>这个板块适合谁</h3>
+      <p>
+        如果你只是想用 brk 写页面，<b>指南已经足够</b>，不需要读这里。
+      </p>
+      <p>
+        架构原理是给两类人准备的：一是<b>想贡献代码的人</b>——需要知道运行时如何组织；
+        二是<b>在选型、需要看到底的人</b>——不想只信文档说"轻量"，想自己判断这套架构是否合理。
+      </p>
+      <p>
+        板块里的每一页都会引用 init.js 的源码片段。你可以直接在浏览器里打开
+        <code style="font-family:var(--mono);font-size:12.5px;color:var(--accent);background:rgba(94,234,212,0.08);padding:1px 6px;border-radius:5px">/static/init.js</code>
+        对着看。
+      </p>
+    </div>
+
+    <!-- NEXT -->
+    <div class="next">
+      <div class="next-hint">// 也可以先看看</div>
+      <a class="next-link" href="/recipes/">
+        <span class="k">04</span>
+        <span class="t">实战配方</span>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div>brk — 一个微前端骨架 · brk.zxmot.com</div>
+    <div class="footer-links">
+      <a href="/guide/">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/">架构</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
