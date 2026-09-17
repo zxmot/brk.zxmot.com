@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API 参考 — brk</title>
+<meta name="description" content="brk 命名空间完整参考：card、icon、opens、_load、_open、_json、_post、_edit、v、weak。">
+<style>
+  :root {
+    --bg:         #0a0b10;
+    --bg-soft:    #0e1017;
+    --surface:    #131722;
+    --surface-2:  #171b27;
+    --border:     #232838;
+    --border-soft:#1a1f2d;
+    --text:       #e7eaf2;
+    --text-dim:   #9aa3b8;
+    --text-dimmer:#5c6479;
+    --accent:     #5eead4;
+    --accent-2:   #60a5fa;
+    --accent-dim: rgba(94, 234, 212, 0.12);
+    --warn:       #ffd479;
+    --warn-dim:   rgba(255, 212, 121, 0.08);
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --radius: 12px;
+    --maxw: 1200px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px; line-height: 1.65;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  body, .fix4ai { word-break: break-all; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+
+  /* NAV */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 11, 16, 0.72);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .nav-inner {
+    max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: 58px;
+    display: flex; align-items: center; gap: 32px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center;
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    color: #06121a; font-weight: 800; font-size: 15px; font-family: var(--mono);
+    box-shadow: 0 0 0 1px rgba(94,234,212,0.25), 0 6px 20px -6px rgba(94,234,212,0.5);
+  }
+  .brand-name { font-family: var(--mono); font-size: 16px; }
+  .nav-links { display: flex; gap: 26px; font-size: 14px; color: var(--text-dim); }
+  .nav-links a { transition: color .15s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--accent); }
+  .nav-right { margin-left: auto; }
+  .ver {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    background: var(--accent-dim); border: 1px solid rgba(94,234,212,0.22);
+    padding: 3px 9px; border-radius: 999px;
+  }
+  @media (max-width: 720px) { .nav-links { display: none; } }
+
+  /* LAYOUT */
+  .layout {
+    max-width: var(--maxw); margin: 0 auto;
+    padding: 40px 24px 80px;
+    display: grid; grid-template-columns: 220px 1fr; gap: 56px; align-items: start;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 24px; padding-top: 24px; }
+  }
+
+  /* SIDEBAR */
+  .side { position: sticky; top: 82px; }
+  @media (max-width: 900px) { .side { position: static; } }
+  .side-title {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 14px; padding-left: 12px;
+  }
+  .side-group {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dimmer); letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 14px 12px 6px;
+  }
+  .side-group:first-of-type { padding-top: 0; }
+  .side-list { list-style: none; margin: 0 0 8px; padding: 0; }
+  .side-list li { margin-bottom: 1px; }
+  .side-list a {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 12px; border-radius: 7px;
+    font-size: 13.5px; color: var(--text-dim);
+    border-left: 2px solid transparent;
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .side-list a:hover { color: var(--text); background: var(--surface); }
+  .side-list a.active {
+    color: var(--accent); background: var(--accent-dim); border-left-color: var(--accent);
+  }
+  .side-list a .nm { font-family: var(--mono); }
+
+  /* CONTENT */
+  .crumb {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--text-dimmer); margin-bottom: 14px;
+  }
+  .crumb b { color: var(--accent); font-weight: 500; }
+  h1 {
+    margin: 0 0 14px;
+    font-size: clamp(30px, 4vw, 40px); font-weight: 700;
+    letter-spacing: -0.025em; line-height: 1.15;
+    background: linear-gradient(180deg, #ffffff 20%, #97a3bb 130%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .lede {
+    font-size: 16px; color: var(--text-dim);
+    max-width: 660px; margin: 0 0 34px; line-height: 1.75;
+  }
+
+  /* 命名空间条 */
+  .ns {
+    border: 1px solid var(--border);
+    background: var(--bg-soft);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 44px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .ns-label {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer); letter-spacing: 0.04em;
+  }
+  .ns-chip {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--text);
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 6px;
+    transition: border-color .15s, color .15s;
+  }
+  .ns-chip:hover { border-color: rgba(94,234,212,0.4); color: var(--accent); }
+
+  /* 分类标题 */
+  .cat {
+    margin-bottom: 44px;
+    scroll-margin-top: 82px;
+  }
+  .cat:last-of-type { margin-bottom: 0; }
+  .cat-head {
+    display: flex; align-items: baseline; gap: 12px;
+    margin-bottom: 18px;
+  }
+  .cat-idx {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--accent); letter-spacing: 0.04em;
+  }
+  .cat-head h2 {
+    margin: 0; font-size: 18px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .cat-head .desc {
+    font-size: 13px; color: var(--text-dimmer);
+    margin-left: auto;
+    font-family: var(--mono);
+  }
+  .cat-head .line {
+    flex: 1; height: 1px; background: var(--border-soft);
+  }
+  @media (max-width: 720px) { .cat-head .desc { display: none; } }
+
+  /* API 行 */
+  .api {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 10px;
+    transition: border-color .15s, background .15s;
+    position: relative;
+  }
+  .api:hover { border-color: rgba(94,234,212,0.3); background: var(--surface-2); }
+  .api-top {
+    display: flex; align-items: baseline; gap: 14px;
+    margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .api-name {
+    font-family: var(--mono); font-size: 16px;
+    color: var(--text); font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .api-name .brk { color: var(--text-dimmer); font-weight: 400; }
+  .api-name .n { color: var(--accent); }
+  .api-kind {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dimmer);
+    border: 1px solid var(--border);
+    padding: 1px 7px; border-radius: 999px;
+  }
+  .api-kind.comp  { color: var(--accent); border-color: rgba(94,234,212,0.28); background: var(--accent-dim); }
+  .api-kind.nav   { color: #c4a7ff; border-color: rgba(196,167,255,0.25); background: rgba(196,167,255,0.06); }
+  .api-kind.net   { color: #82c8ff; border-color: rgba(130,200,255,0.22); background: rgba(130,200,255,0.06); }
+  .api-kind.cache { color: #ffd479; border-color: rgba(255,212,121,0.25); background: rgba(255,212,121,0.06); }
+
+  .api-sig {
+    font-family: var(--mono); font-size: 13px;
+    color: #c9d1e0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 7px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .api-sig::-webkit-scrollbar { height: 6px; }
+  .api-sig::-webkit-scrollbar-thumb { background: #2b3145; border-radius: 3px; }
+  .api-sig .fn { color: var(--accent); }
+  .api-sig .ty { color: #c4a7ff; }
+  .api-sig .pr { color: var(--text-dimmer); }
+
+  .api-desc {
+    margin: 0; font-size: 13.8px;
+    color: var(--text-dim); line-height: 1.7;
+    max-width: 620px;
+  }
+  .api-desc code {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--accent); background: rgba(94,234,212,0.08);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  .api-desc + .api-desc { margin-top: 8px; }
+
+  /* 命名约定 */
+  .rules {
+    margin-top: 52px;
+    padding: 26px 28px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-soft);
+    position: relative;
+    overflow: hidden;
+  }
+  .rules::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(400px 220px at 100% 0%, rgba(94,234,212,0.06), transparent 60%);
+    pointer-events: none;
+  }
+  .rules-inner { position: relative; }
+  .rules-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 14px;
+  }
+  .rules h3 {
+    margin: 0 0 16px; font-size: 18px; font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+  .rule {
+    display: grid; grid-template-columns: 72px 1fr;
+    gap: 18px; padding: 14px 0;
+    border-top: 1px solid var(--border-soft);
+    align-items: baseline;
+  }
+  .rule:first-of-type { border-top: none; padding-top: 0; }
+  .rule-key {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--accent);
+  }
+  .rule-body {
+    font-size: 13.8px; color: var(--text-dim);
+    line-height: 1.7;
+  }
+  .rule-body b { color: var(--text); font-weight: 500; }
+  .rule-body code {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--accent); background: rgba(94,234,212,0.08);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  @media (max-width: 600px) {
+    .rule { grid-template-columns: 1fr; gap: 4px; }
+  }
+
+  /* STATUS */
+  .status {
+    display: flex; gap: 14px; align-items: center;
+    margin-top: 40px;
+    padding: 18px 22px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warn);
+    background: var(--warn-dim);
+    border-radius: 10px;
+  }
+  .status .ic {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--warn); flex-shrink: 0;
+  }
+  .status p {
+    margin: 0; font-size: 14px; color: var(--text-dim);
+  }
+  .status b { color: var(--text); font-weight: 500; }
+
+  /* NEXT */
+  .next {
+    display: flex; justify-content: space-between;
+    align-items: center; gap: 16px;
+    padding-top: 28px; margin-top: 48px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .next-hint { font-size: 13px; color: var(--text-dimmer); font-family: var(--mono); }
+  .next-link {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 11px 20px;
+    border: 1px solid var(--border); background: var(--surface);
+    border-radius: 9px; font-size: 14px;
+    transition: border-color .15s, background .15s;
+  }
+  .next-link:hover { border-color: rgba(94,234,212,0.4); background: var(--surface-2); }
+  .next-link .k { font-family: var(--mono); font-size: 12px; color: var(--text-dimmer); }
+  .next-link .t { color: var(--text); }
+  .next-link .arrow { color: var(--accent); }
+
+  /* FOOTER */
+  footer {
+    padding: 40px 24px 56px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--text-dimmer); font-size: 13px;
+  }
+  .footer-inner {
+    max-width: var(--maxw); margin: 0 auto;
+    display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+    align-items: center;
+  }
+  .footer-links { display: flex; gap: 22px; }
+  .footer-links a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark">b</span>
+      <span class="brand-name">brk</span>
+    </a>
+    <nav class="nav-links">
+      <a href="/guide/">指南</a>
+      <a href="/api/" class="active">API</a>
+      <a href="/architecture/">架构</a>
+      <a href="/recipes/">实战</a>
+    </nav>
+    <div class="nav-right">
+      <span class="ver">brk.zxmot.com</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="side">
+    <div class="side-title">API 参考</div>
+
+    <div class="side-group">组件</div>
+    <ul class="side-list">
+      <li><a href="#card"><span class="nm">card</span></a></li>
+      <li><a href="#icon"><span class="nm">icon</span></a></li>
+    </ul>
+
+    <div class="side-group">导航</div>
+    <ul class="side-list">
+      <li><a href="#opens"><span class="nm">opens</span></a></li>
+      <li><a href="#_open"><span class="nm">_open</span></a></li>
+    </ul>
+
+    <div class="side-group">加载</div>
+    <ul class="side-list">
+      <li><a href="#_load"><span class="nm">_load</span></a></li>
+    </ul>
+
+    <div class="side-group">网络</div>
+    <ul class="side-list">
+      <li><a href="#_json"><span class="nm">_json</span></a></li>
+      <li><a href="#_post"><span class="nm">_post</span></a></li>
+      <li><a href="#_edit"><span class="nm">_edit</span></a></li>
+    </ul>
+
+    <div class="side-group">缓存</div>
+    <ul class="side-list">
+      <li><a href="#v"><span class="nm">v</span></a></li>
+      <li><a href="#weak"><span class="nm">weak</span></a></li>
+    </ul>
+
+    <div class="side-group">约定</div>
+    <ul class="side-list">
+      <li><a href="#rules"><span class="nm">命名约定</span></a></li>
+    </ul>
+  </aside>
+
+  <!-- CONTENT -->
+  <main>
+    <div class="crumb">文档 / <b>API 参考</b></div>
+    <h1>API 参考</h1>
+    <p class="lede">
+      brk 的全部能力都集中在 <code style="font-family:var(--mono);font-size:14px;color:var(--accent)">brk</code> 命名空间下，
+      一共 10 项：2 个组件、2 个导航方法、1 个加载方法、3 个网络方法、2 个缓存容器。
+      这一页是总览，每项都会拆成单独的详细页。
+    </p>
+
+    <!-- NS 总览 -->
+    <div class="ns">
+      <span class="ns-label">// brk 命名空间</span>
+      <a class="ns-chip" href="#card">card</a>
+      <a class="ns-chip" href="#icon">icon</a>
+      <a class="ns-chip" href="#opens">opens</a>
+      <a class="ns-chip" href="#_open">_open</a>
+      <a class="ns-chip" href="#_load">_load</a>
+      <a class="ns-chip" href="#_json">_json</a>
+      <a class="ns-chip" href="#_post">_post</a>
+      <a class="ns-chip" href="#_edit">_edit</a>
+      <a class="ns-chip" href="#v">v</a>
+      <a class="ns-chip" href="#weak">weak</a>
+    </div>
+
+    <!-- ========== 组件 ========== -->
+    <section class="cat" id="cat-comp">
+      <div class="cat-head">
+        <span class="cat-idx">01 —</span>
+        <h2>组件</h2>
+        <span class="line"></span>
+        <span class="desc">// 内置的两个 FunctionComponent</span>
+      </div>
+
+      <div class="api" id="card">
+        <div class="api-top">
+          <span class="api-name"><span class="brk">brk.</span><span class="n">card</span></span>
+          <span class="api-kind comp">组件</span>
+        </div>
+        <div class="api-sig">FunctionComponent&lt;{ cls?: string; css?: string; clk?: Function }&gt;</div>
+        <p class="api-desc">
+          全局统一的卡片组件。一个带边框、内边距、圆角的容器，用于承载内容块。
+          之所以内置，是因为它在页面里出现的频率极高——几乎每个独立内容单元都会被包一层。
+        </p>
+        <p class="api-desc">
+          用法和原生元素一致：<code>&lt;brk.card&gt;...&lt;/brk.card&gt;</code>，返回 <code>HTMLElement</code>。
+        </p>
+      </div>
+
+      <div class="api" id="icon">
+        <div class="api-top">
+          <span class="api-name"><span class="brk">brk.</span><span class="n">icon</span></span>
+          <span class="api-kind comp">组件</span>
+        </div>
+        <div class="api-sig">FunctionComponent&lt;{ d: string; c?: string; styles?: object }&gt;</div>
+        <p class="api-desc">
+          渲染一个 SVG 图标。底层使用 <code>document.createElementNS</code> 创建 SVG 命名空间下的节点，
+          因此属性处理方式与普通元素不同——尺寸、颜色等通过 <code>styles</code> 对象传入，而非 <code>css</code> 字符串。
+        </p>
+        <p class="api-desc">
+          <code>d</code> 是 SVG 路径数据；<code>c</code> 是颜色简写。
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== 导航 ========== -->
+    <section class="cat" id="cat-nav">
+      <div class="cat-head">
+        <span class="cat-idx">02 —</span>
+        <h2>导航</h2>
+        <span class="line"></span>
+        <span class="desc">// 打开页面 / 打开链接</span>
+      </div>
+
+      <div class="api" id="opens">
+        <div class="api-top">
+          <span class="api-name"><span class="brk">brk.</span><span class="n">opens</span></span>
+          <span class="api-kind nav">导航</span>
+        </div>
+        <div class="api-sig">(meta: any) =&gt; any</div>
+        <p class="api-desc">
+          打开一个任意目标——页面、应用或文档。<b>默认是一个空函数</b>，
+          不会报错也不会做任何事。它的语义由你在应用层定义。
+        </p>
+        <p class="api-desc">
+          这是 brk 里最常被覆盖的 API。多页应用、微前端外壳、路由跳转——都在这里实现。
+          详细做法见 <a href="/guide/multiple-pages/" style="color:var(--accent);border-bottom:1px dashed rgba(94,234,212,0.4)">指南 · 多页容器</a>。
+        </p>
+      </div>
+
+      <div class="api" id="_open">
+        <div class="api-top">
+          <span class="api-name"><span class="brk">brk.</span><span class="n">_open</span></span>
+          <span class="api-kind nav">导航</span>
+        </div>
+        <div class="api-sig">(key: string, target?: string) =&gt; any</div>
+        <p class="api-desc">
+          打开一个网络链接。默认行为等同于在新标签页打开，
+          即 <code>window.open(key, target ?? '_blank')</code>。
+        </p>
+        <p class="api-desc">
+          与 <code>opens</code> 的分工：<code>opens</code> 面向应用内部（页面、模块），
+          <code>_open</code> 面向外部（URL）。
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== 加载 ========== -->
+    <section class="cat" id="cat-load">
+      <div class="cat-head">
+        <span class="cat-idx">03 —</span>
+        <h2>加载</h2>
+        <span class="line"></span>
+        <span class="desc">// 动态引入模块</span>
+      </div>
+
+      <div class="api" id="_load">
+        <div class="api-top">
+          <span class="api-name"><span class="brk">brk.</span><span class="n">_load</span></span>
+          <span class="api-kind net">加载</span>
+        </div>
+        <div class="api-sig">(src: string) =&gt; Promise&lt;any&gt;</div>
+        <p class="api-desc">
+          加载一个异步模块，本质是浏览器的动态 <code>import()</code>。
+          加载完成后返回模块对象，通常包含 <code>page.vino</code>。
+        </p>
+        <p class="api-desc">
+          页面之间互相加载、外壳挂载子页面、扩展能力挂到 <code>brk</code> 上——都走这里。
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== 网络 ========== -->
+    <section class="cat" id="cat-net">
+      <div class="cat-head">
+        <span class="cat-idx">04 —</span>
+        <h2>网络</h2>
+        <span class="line"></span>
+        <span class="desc">// 三个最小 HTTP 封装</span>
+      </div>
+
+      <div class="api" id="_json">
+        <div class="api-top">
+          <span class="api-name"><span class="brk">brk.</span><span class="n">_json</span></span>
+          <span class="api-kind net">网络</span>
+        </div>
+        <div class="api-sig">(path: string) =&gt; Promise&lt;object&gt;</div>
+        <p class="api-desc">
+          发起 GET 请求，返回解析后的 JSON。用于拉取数据。
+        </p>
+      </div>
+
+      <div class="api" id="_post">
+        <div class="api-top">
+          <span class="api-name"><span class="brk">brk.</span><span class="n">_post</span></span>
+          <span class="api-kind net">网络</span>
+        </div>
+        <div class="api-sig">(path: string, body: object) =&gt; Promise&lt;object&gt;</div>
+        <p class="api-desc">
+          发起 POST 请求，提交 JSON body，返回解析后的 JSON。用于创建资源。
+        </p>
+      </div>
+
+      <div class="api" id="_edit">
+        <div class="api-top">
+          <span class="api-name"><span class="brk">brk.</span><span class="n">_edit</span></span>
+          <span class="api-kind net">网络</span>
+        </div>
+        <div class="api-sig">(path: string, body: object) =&gt; Promise&lt;object&gt;</div>
+        <p class="api-desc">
+          发起 PATCH 请求，提交 JSON body，返回解析后的 JSON。用于局部更新资源。
+        </p>
+        <p class="api-desc">
+          只提供 GET / POST / PATCH 三种最常用的语义。<code>DELETE</code>、<code>PUT</code>
+          等其余方法需要自行调用 <code>fetch</code>——这是"骨架"定位的一部分。
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== 缓存 ========== -->
+    <section class="cat" id="cat-cache">
+      <div class="cat-head">
+        <span class="cat-idx">05 —</span>
+        <h2>缓存</h2>
+        <span class="line"></span>
+        <span class="desc">// 两个不同生命周期的存储</span>
+      </div>
+
+      <div class="api" id="v">
+        <div class="api-top">
+          <span class="api-name"><span class="brk">brk.</span><span class="n">v</span></span>
+          <span class="api-kind cache">缓存</span>
+        </div>
+        <div class="api-sig">any</div>
+        <p class="api-desc">
+          全局共享缓存，初始值为 <code>{}</code>。用于跨页面存放数据——
+          即使页面卸载，这里的数据依然保留。
+        </p>
+        <p class="api-desc">
+          典型用法：存登录态、主题偏好、用户信息、跨页面的业务数据。
+        </p>
+      </div>
+
+      <div class="api" id="weak">
+        <div class="api-top">
+          <span class="api-name"><span class="brk">brk.</span><span class="n">weak</span></span>
+          <span class="api-kind cache">缓存</span>
+        </div>
+        <div class="api-sig">WeakMap&lt;HTMLElement, any&gt;</div>
+        <p class="api-desc">
+          一个以 DOM 为 key 的弱引用存储。把一个 DOM 元素作为 key，
+          就能挂上任意关联数据；当这个 DOM 被移除并被垃圾回收后，关联数据自动消失。
+        </p>
+        <p class="api-desc">
+          典型用法：把 <code>{ state, handlers }</code> 挂到行 DOM 上，
+          父组件通过事件冒泡的 <code>currentTarget</code> 反查到对应的数据。
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== 命名约定 ========== -->
+    <section class="cat" id="rules">
+      <div class="rules">
+        <div class="rules-inner">
+          <div class="rules-tag">// 命名约定</div>
+          <h3>三个符号的语义</h3>
+
+          <div class="rule">
+            <span class="rule-key">无前缀</span>
+            <div class="rule-body">
+              <b>面向应用的能力。</b> <code>card</code>、<code>icon</code>、<code>opens</code>、<code>v</code>、<code>weak</code>
+              直接以名字挂在 <code>brk</code> 上。它们要么是组件，要么是应用层高频使用的语义。
+            </div>
+          </div>
+
+          <div class="rule">
+            <span class="rule-key">_ 前缀</span>
+            <div class="rule-body">
+              <b>面向基础设施的能力。</b> <code>_load</code>、<code>_open</code>、<code>_json</code>、<code>_post</code>、<code>_edit</code>
+              带下划线。它们是对浏览器原生能力的薄封装，属于"底层工具"，
+              不常直接出现在业务代码里，也不鼓励被应用层覆盖。
+            </div>
+          </div>
+
+          <div class="rule">
+            <span class="rule-key">单字母</span>
+            <div class="rule-body">
+              <b>高频、短、有意义。</b> <code>v</code> 是 value / vault 的缩写，
+              代表全局值容器；<code>weak</code> 直接取自 <code>WeakMap</code>。
+              这类名字只在 brk 命名空间下使用，不会污染全局。
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- STATUS -->
+    <div class="status">
+      <span class="ic">!</span>
+      <p><b>这一页是总览。</b> 每一项都会拆成单独的详细页，包含参数说明、返回值、示例、源码位置与注意事项。目前所有条目都已列出，但详细页尚未完成。</p>
+    </div>
+
+    <!-- NEXT -->
+    <div class="next">
+      <div class="next-hint">// 也可以先看看</div>
+      <a class="next-link" href="/architecture/">
+        <span class="k">03</span>
+        <span class="t">架构原理</span>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div>brk · 一个微前端骨架 · brk.zxmot.com</div>
+    <div class="footer-links">
+      <a href="/guide/">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/">架构</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

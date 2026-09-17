@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>指南 — brk</title>
 <meta name="description" content="brk 指南概览：七章内容全景、三条阅读路径，以及读完之后你会拥有什么。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%235eead4'/><text x='50' y='72' font-size='70' font-family='monospace' font-weight='800' text-anchor='middle' fill='%2306121a'>b</text></svg>">
 <style>
   :root {
     --bg:         #0a0b10;
@@ -21,7 +22,6 @@
     --accent-dim: rgba(94, 234, 212, 0.12);
     --warn:       #ffd479;
     --warn-dim:   rgba(255, 212, 121, 0.08);
-    --red:        #ff8a8a;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     --radius: 12px;
@@ -226,14 +226,16 @@
     display: flex; gap: 5px; flex-wrap: wrap;
     margin-bottom: 12px;
   }
-  .path-seq span {
+  .path-seq a {
     font-family: var(--mono); font-size: 11.5px;
     padding: 2px 8px;
     background: var(--bg-soft);
     border: 1px solid var(--border);
     border-radius: 5px;
     color: var(--text);
+    transition: border-color .15s, color .15s;
   }
+  .path-seq a:hover { border-color: rgba(94,234,212,0.4); color: var(--accent); }
   .path-card p {
     margin: 0; font-size: 13px; color: var(--text-dim);
     line-height: 1.6;
@@ -439,10 +441,10 @@
       <span class="brand-name">brk</span>
     </a>
     <nav class="nav-links">
-      <a href="#" class="active">指南</a>
-      <a href="#">API</a>
-      <a href="#">架构</a>
-      <a href="#">实战</a>
+      <a href="/guide/" class="active">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/">架构</a>
+      <a href="/recipes/">实战</a>
     </nav>
     <div class="nav-right">
       <span class="ver">brk.zxmot.com</span>
@@ -456,14 +458,14 @@
   <aside class="side">
     <div class="side-title">指南</div>
     <ul class="side-list">
-      <li><a href="#" class="active"><span class="num">—</span>概览</a></li>
-      <li><a href="#"><span class="num">01</span>快速开始</a></li>
-      <li><a href="#"><span class="num">02</span>设计哲学</a></li>
-      <li><a href="#"><span class="num">03</span>JSX 语法</a></li>
-      <li><a href="#"><span class="num">04</span>页面契约</a></li>
-      <li><a href="#"><span class="num">05</span>渲染与更新</a></li>
-      <li><a href="#"><span class="num">06</span>父子通信</a></li>
-      <li><a href="#"><span class="num">07</span>多页容器</a></li>
+      <li><a href="/guide/" class="active"><span class="num">—</span>概览</a></li>
+      <li><a href="/guide/getting-started/"><span class="num">01</span>快速开始</a></li>
+      <li><a href="/guide/philosophy/"><span class="num">02</span>设计哲学</a></li>
+      <li><a href="/guide/jsx/"><span class="num">03</span>JSX 语法</a></li>
+      <li><a href="/guide/page-contract/"><span class="num">04</span>页面契约</a></li>
+      <li><a href="/guide/rendering/"><span class="num">05</span>渲染与更新</a></li>
+      <li><a href="/guide/context/"><span class="num">06</span>父子通信</a></li>
+      <li><a href="/guide/multiple-pages/"><span class="num">07</span>多页容器</a></li>
     </ul>
   </aside>
 
@@ -480,19 +482,19 @@
     <div class="map">
       <div class="map-title">// 全景图</div>
       <div class="map-strip">
-        <a class="map-node" href="#"><span class="n">01</span>快速开始</a>
+        <a class="map-node" href="/guide/getting-started/"><span class="n">01</span>快速开始</a>
         <span class="map-sep">→</span>
-        <a class="map-node" href="#"><span class="n">02</span>设计哲学</a>
+        <a class="map-node" href="/guide/philosophy/"><span class="n">02</span>设计哲学</a>
         <span class="map-sep">→</span>
-        <a class="map-node" href="#"><span class="n">03</span>JSX 语法</a>
+        <a class="map-node" href="/guide/jsx/"><span class="n">03</span>JSX 语法</a>
         <span class="map-sep">→</span>
-        <a class="map-node" href="#"><span class="n">04</span>页面契约</a>
+        <a class="map-node" href="/guide/page-contract/"><span class="n">04</span>页面契约</a>
         <span class="map-sep">→</span>
-        <a class="map-node" href="#"><span class="n">05</span>渲染与更新</a>
+        <a class="map-node" href="/guide/rendering/"><span class="n">05</span>渲染与更新</a>
         <span class="map-sep">→</span>
-        <a class="map-node" href="#"><span class="n">06</span>父子通信</a>
+        <a class="map-node" href="/guide/context/"><span class="n">06</span>父子通信</a>
         <span class="map-sep">→</span>
-        <a class="map-node" href="#"><span class="n">07</span>多页容器</a>
+        <a class="map-node" href="/guide/multiple-pages/"><span class="n">07</span>多页容器</a>
       </div>
     </div>
 
@@ -502,7 +504,7 @@
         <div class="qs-tag">// 只想先跑起来</div>
         <p>如果你不打算通读，只想尽快看到第一张卡片渲染出来——<b>直接跳到第 01 章。</b>五步，十分钟。</p>
       </div>
-      <a class="qs-btn" href="#">
+      <a class="qs-btn" href="/guide/getting-started/">
         从快速开始进入
         <span class="arr">→</span>
       </a>
@@ -520,8 +522,13 @@
           <h4>完整读一遍</h4>
           <div class="sub">约 40 分钟 · 推荐</div>
           <div class="path-seq">
-            <span>01</span><span>02</span><span>03</span><span>04</span>
-            <span>05</span><span>06</span><span>07</span>
+            <a href="/guide/getting-started/">01</a>
+            <a href="/guide/philosophy/">02</a>
+            <a href="/guide/jsx/">03</a>
+            <a href="/guide/page-contract/">04</a>
+            <a href="/guide/rendering/">05</a>
+            <a href="/guide/context/">06</a>
+            <a href="/guide/multiple-pages/">07</a>
           </div>
           <p>按顺序读完。既能上手，也能理解背后的取舍，以及它对你项目的适配度。</p>
         </div>
@@ -530,7 +537,9 @@
           <h4>只想写页面</h4>
           <div class="sub">约 15 分钟 · 最短路径</div>
           <div class="path-seq">
-            <span>01</span><span>03</span><span>04</span>
+            <a href="/guide/getting-started/">01</a>
+            <a href="/guide/jsx/">03</a>
+            <a href="/guide/page-contract/">04</a>
           </div>
           <p>快速开始 + JSX 语法 + 页面契约。知道这三章就足够写出可用的页面。</p>
         </div>
@@ -539,7 +548,9 @@
           <h4>先想清楚为什么</h4>
           <div class="sub">约 20 分钟 · 面向选型</div>
           <div class="path-seq">
-            <span>02</span><span>05</span><span>07</span>
+            <a href="/guide/philosophy/">02</a>
+            <a href="/guide/rendering/">05</a>
+            <a href="/guide/multiple-pages/">07</a>
           </div>
           <p>设计哲学 + 渲染与更新 + 多页容器。看完你就能判断 brk 是否适合你的项目。</p>
         </div>
@@ -556,7 +567,7 @@
       </div>
       <div class="chapters">
 
-        <a class="ch" href="#">
+        <a class="ch" href="/guide/getting-started/">
           <div class="ch-top">
             <span class="ch-num">01 / GETTING STARTED</span>
             <span class="ch-arrow">→</span>
@@ -566,7 +577,7 @@
           <div class="ch-gain">你拥有一个最小可运行项目</div>
         </a>
 
-        <a class="ch" href="#">
+        <a class="ch" href="/guide/philosophy/">
           <div class="ch-top">
             <span class="ch-num">02 / PHILOSOPHY</span>
             <span class="ch-arrow">→</span>
@@ -588,7 +599,7 @@
       </div>
       <div class="chapters">
 
-        <a class="ch" href="#">
+        <a class="ch" href="/guide/jsx/">
           <div class="ch-top">
             <span class="ch-num">03 / JSX</span>
             <span class="ch-arrow">→</span>
@@ -598,7 +609,7 @@
           <div class="ch-gain">你能一次写对 JSX</div>
         </a>
 
-        <a class="ch" href="#">
+        <a class="ch" href="/guide/page-contract/">
           <div class="ch-top">
             <span class="ch-num">04 / PAGE CONTRACT</span>
             <span class="ch-arrow">→</span>
@@ -608,7 +619,7 @@
           <div class="ch-gain">你能理解 brk 与你的代码的唯一接口</div>
         </a>
 
-        <a class="ch" href="#">
+        <a class="ch" href="/guide/rendering/">
           <div class="ch-top">
             <span class="ch-num">05 / RENDERING</span>
             <span class="ch-arrow">→</span>
@@ -618,7 +629,7 @@
           <div class="ch-gain">你能为每种变化选择正确的更新粒度</div>
         </a>
 
-        <a class="ch" href="#">
+        <a class="ch" href="/guide/context/">
           <div class="ch-top">
             <span class="ch-num">06 / CONTEXT</span>
             <span class="ch-arrow">→</span>
@@ -640,7 +651,7 @@
       </div>
       <div class="chapters">
 
-        <a class="ch" href="#">
+        <a class="ch" href="/guide/multiple-pages/">
           <div class="ch-top">
             <span class="ch-num">07 / MULTIPLE PAGES</span>
             <span class="ch-arrow">→</span>
@@ -684,7 +695,7 @@
     <!-- NEXT -->
     <div class="next">
       <div class="next-hint">// 从第一章开始</div>
-      <a class="next-link" href="#">
+      <a class="next-link" href="/guide/getting-started/">
         <span class="k">01</span>
         <span class="t">快速开始</span>
         <span class="arrow">→</span>
@@ -698,9 +709,9 @@
   <div class="footer-inner">
     <div>brk · 一个微前端骨架 · brk.zxmot.com</div>
     <div class="footer-links">
-      <a href="#">指南</a>
-      <a href="#">API</a>
-      <a href="#">架构</a>
+      <a href="/guide/">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/">架构</a>
     </div>
   </div>
 </footer>
