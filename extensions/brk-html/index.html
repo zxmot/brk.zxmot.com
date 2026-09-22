@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>brk.html — brk 扩展机制</title>
+<meta name="description" content="brk.html：一个基于 Shadow DOM 的样式作用域容器，不注册自定义元素，只借样式隔离。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%235eead4'/><text x='50' y='72' font-size='70' font-family='monospace' font-weight='800' text-anchor='middle' fill='%2306121a'>b</text></svg>">
+<style>
+  :root {
+    --bg:         #0a0b10;
+    --bg-soft:    #0e1017;
+    --surface:    #131722;
+    --surface-2:  #171b27;
+    --border:     #232838;
+    --border-soft:#1a1f2d;
+    --text:       #e7eaf2;
+    --text-dim:   #9aa3b8;
+    --text-dimmer:#5c6479;
+    --accent:     #5eead4;
+    --accent-2:   #60a5fa;
+    --accent-dim: rgba(94, 234, 212, 0.12);
+    --warn:       #ffd479;
+    --warn-dim:   rgba(255, 212, 121, 0.08);
+    --red:        #ff8a8a;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --radius: 12px;
+    --maxw: 1200px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px; line-height: 1.65;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  /* NAV */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 11, 16, 0.72);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .nav-inner {
+    max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: 58px;
+    display: flex; align-items: center; gap: 32px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center;
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    color: #06121a; font-weight: 800; font-size: 15px; font-family: var(--mono);
+    box-shadow: 0 0 0 1px rgba(94,234,212,0.25), 0 6px 20px -6px rgba(94,234,212,0.5);
+  }
+  .brand-name { font-family: var(--mono); font-size: 16px; }
+  .nav-links { display: flex; gap: 26px; font-size: 14px; color: var(--text-dim); }
+  .nav-links a { transition: color .15s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-right { margin-left: auto; }
+  .ver {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    background: var(--accent-dim); border: 1px solid rgba(94,234,212,0.22);
+    padding: 3px 9px; border-radius: 999px;
+  }
+  @media (max-width: 720px) { .nav-links { display: none; } }
+
+  /* LAYOUT */
+  .layout {
+    max-width: var(--maxw); margin: 0 auto;
+    padding: 40px 24px 80px;
+    display: grid; grid-template-columns: 220px 1fr; gap: 56px; align-items: start;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 24px; padding-top: 24px; }
+  }
+
+  /* SIDEBAR */
+  .side { position: sticky; top: 82px; }
+  @media (max-width: 900px) { .side { position: static; } }
+  .side-title {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dimmer); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 14px; padding-left: 12px;
+  }
+  .side-group {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dimmer); letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 14px 12px 6px;
+  }
+  .side-group:first-of-type { padding-top: 0; }
+  .side-list { list-style: none; margin: 0 0 8px; padding: 0; }
+  .side-list li { margin-bottom: 1px; }
+  .side-list a {
+    display: block; padding: 6px 12px; border-radius: 7px;
+    font-size: 13.5px; color: var(--text-dim);
+    border-left: 2px solid transparent;
+    transition: color .15s, background .15s, border-color .15s;
+  }
+  .side-list a:hover { color: var(--text); background: var(--surface); }
+  .side-list a.active {
+    color: var(--accent); background: var(--accent-dim); border-left-color: var(--accent);
+  }
+  .side-list a.dim {
+    color: var(--text-dimmer); pointer-events: none;
+  }
+  .side-list a .num {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dimmer); margin-right: 8px;
+  }
+  .side-list a.active .num { color: var(--accent); }
+  .side-list a .soon {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-dimmer);
+    margin-left: 6px;
+    opacity: 0.6;
+  }
+
+  /* CONTENT */
+  .crumb {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--text-dimmer); margin-bottom: 14px;
+  }
+  .crumb b { color: var(--accent); font-weight: 500; }
+  h1 {
+    margin: 0 0 14px;
+    font-size: clamp(30px, 4vw, 40px); font-weight: 700;
+    letter-spacing: -0.025em; line-height: 1.15;
+    background: linear-gradient(180deg, #ffffff 20%, #97a3bb 130%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .lede {
+    font-size: 16px; color: var(--text-dim);
+    max-width: 680px; margin: 0 0 32px; line-height: 1.75;
+  }
+  .lede b { color: var(--text); font-weight: 500; }
+
+  /* 签名条 */
+  .sig {
+    font-family: var(--mono); font-size: 13.5px;
+    color: #c9d1e0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 44px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .sig::-webkit-scrollbar { height: 6px; }
+  .sig::-webkit-scrollbar-thumb { background: #2b3145; border-radius: 3px; }
+  .sig .fn { color: var(--accent); }
+  .sig .ty { color: #c4a7ff; }
+  .sig .cm { color: var(--text-dimmer); font-style: italic; }
+
+  /* 章节 */
+  .sec { margin-bottom: 54px; }
+  .sec:last-of-type { margin-bottom: 0; }
+  .sec-head {
+    display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px;
+  }
+  .sec-idx {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--accent); letter-spacing: 0.04em;
+    padding-top: 6px;
+  }
+  .sec-head h2 {
+    margin: 0; font-size: 21px; font-weight: 600;
+    letter-spacing: -0.015em; line-height: 1.35;
+  }
+  .sec p { margin: 0 0 16px; color: var(--text-dim); max-width: 660px; }
+  .sec p:last-child { margin-bottom: 0; }
+  .sec b { color: var(--text); font-weight: 500; }
+  code.inline {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--accent); background: rgba(94,234,212,0.08);
+    padding: 1px 6px; border-radius: 5px;
+  }
+  code.inline.plain {
+    color: var(--text); background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  /* 代码 */
+  .code {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--bg-soft); overflow: hidden; margin: 18px 0;
+    box-shadow: 0 30px 60px -40px rgba(0,0,0,0.9);
+  }
+  .code-bar {
+    display: flex; align-items: center; gap: 7px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--surface);
+  }
+  .code-bar .dot { width: 10px; height: 10px; border-radius: 50%; background: #2b3145; }
+  .code-title {
+    margin-left: 8px; font-family: var(--mono);
+    font-size: 12px; color: var(--text-dimmer);
+  }
+  pre {
+    margin: 0; padding: 20px 22px; overflow-x: auto;
+    font-family: var(--mono); font-size: 13.5px; line-height: 1.75;
+    color: #c9d1e0; tab-size: 2;
+  }
+  pre::-webkit-scrollbar { height: 8px; }
+  pre::-webkit-scrollbar-thumb { background: #2b3145; border-radius: 4px; }
+  pre::-webkit-scrollbar-track { background: transparent; }
+  .k { color: #ff7eb6; }
+  .f { color: #82c8ff; }
+  .s { color: #b8e986; }
+  .t { color: #5eead4; }
+  .a { color: #c4a7ff; }
+  .c { color: #5c6479; font-style: italic; }
+  .n { color: #ffd479; }
+  .hl { color: #5eead4; }
+
+  /* Callout */
+  .callout {
+    display: flex; gap: 14px;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    background: var(--surface); border-radius: 10px;
+    margin: 20px 0;
+  }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-dim); }
+  .callout.danger { border-left-color: var(--red); background: rgba(255,138,138,0.06); }
+  .callout .ic {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--accent); flex-shrink: 0; line-height: 1.65;
+  }
+  .callout.warn .ic { color: var(--warn); }
+  .callout.danger .ic { color: var(--red); }
+  .callout p { margin: 0; font-size: 14px; color: var(--text-dim); max-width: none; }
+  .callout p + p { margin-top: 8px; }
+  .callout b { color: var(--text); font-weight: 500; }
+  .callout code {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--accent); background: rgba(94,234,212,0.08);
+    padding: 1px 6px; border-radius: 5px;
+  }
+
+  /* Quote */
+  .quote {
+    padding: 22px 26px;
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    border-radius: 0 10px 10px 0;
+    margin: 24px 0;
+  }
+  .quote p {
+    margin: 0; font-size: 16px; color: var(--text);
+    line-height: 1.7; max-width: none;
+  }
+  .quote p + p { margin-top: 8px; font-size: 14px; color: var(--text-dim); }
+
+  /* DOM 结构图 */
+  .dom {
+    border: 1px solid var(--border);
+    background: var(--bg-soft);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin: 20px 0;
+    font-family: var(--mono); font-size: 13px;
+    line-height: 1.9; color: var(--text-dim);
+    overflow-x: auto;
+  }
+  .dom pre {
+    margin: 0; padding: 0;
+    background: none;
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--text-dim);
+  }
+  .dom .g { color: var(--text-dimmer); }
+  .dom .y { color: var(--accent); }
+  .dom .p { color: #c4a7ff; }
+  .dom .b { color: #82c8ff; }
+  .dom .n { color: #ffd479; }
+
+  /* Table */
+  .tbl {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; margin: 22px 0;
+    background: var(--bg-soft);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left;
+    font-family: var(--mono); font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--text-dimmer);
+    padding: 12px 18px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-soft);
+    font-weight: 500;
+  }
+  tbody td {
+    padding: 13px 18px;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody td:first-child { color: var(--text); }
+  tbody code {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--accent); background: rgba(94,234,212,0.08);
+    padding: 1px 6px; border-radius: 5px;
+  }
+  tbody code.plain {
+    color: var(--text); background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  /* Use cases 卡片 */
+  .uses {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; margin: 22px 0;
+  }
+  @media (max-width: 720px) { .uses { grid-template-columns: 1fr; } }
+  .use {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    background: var(--surface);
+  }
+  .use.yes { border-left: 3px solid var(--accent); }
+  .use.no  { border-left: 3px solid var(--red); }
+  .use h4 {
+    margin: 0 0 12px; font-size: 13px; font-weight: 600;
+    font-family: var(--mono); letter-spacing: 0.04em;
+  }
+  .use.yes h4 { color: var(--accent); }
+  .use.no h4  { color: var(--red); }
+  .use ul { margin: 0; padding: 0; list-style: none; }
+  .use li {
+    position: relative; padding-left: 20px;
+    font-size: 13.5px; color: var(--text-dim);
+    margin-bottom: 10px; line-height: 1.6;
+  }
+  .use li:last-child { margin-bottom: 0; }
+  .use.yes li::before {
+    content: "→"; position: absolute; left: 0;
+    color: var(--accent); font-family: var(--mono);
+  }
+  .use.no li::before {
+    content: "×"; position: absolute; left: 0;
+    color: var(--red); font-weight: 700;
+  }
+
+  /* 对比表（WC vs brk.html） */
+  .compare {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; margin: 22px 0;
+  }
+  @media (max-width: 720px) { .compare { grid-template-columns: 1fr; } }
+  .cmp-col {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .cmp-col h4 {
+    margin: 0 0 14px; font-size: 13px; font-weight: 600;
+    font-family: var(--mono); letter-spacing: 0.04em;
+  }
+  .cmp-col.wc h4  { color: var(--text-dimmer); }
+  .cmp-col.brk h4 { color: var(--accent); }
+  .cmp-col ul { margin: 0; padding: 0; list-style: none; }
+  .cmp-col li {
+    position: relative; padding-left: 20px;
+    font-size: 13.5px; color: var(--text-dim);
+    margin-bottom: 10px; line-height: 1.65;
+  }
+  .cmp-col li:last-child { margin-bottom: 0; }
+  .cmp-col.wc li::before {
+    content: "·"; position: absolute; left: 6px;
+    color: var(--text-dimmer); font-weight: 700;
+    font-size: 18px; line-height: 1; top: 4px;
+  }
+  .cmp-col.brk li::before {
+    content: "·"; position: absolute; left: 6px;
+    color: var(--accent); font-weight: 700;
+    font-size: 18px; line-height: 1; top: 4px;
+  }
+
+  /* NEXT */
+  .next {
+    display: flex; justify-content: space-between;
+    align-items: center; gap: 16px;
+    padding-top: 28px; margin-top: 56px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .next-hint { font-size: 13px; color: var(--text-dimmer); font-family: var(--mono); }
+  .next-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .next-link {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 11px 20px;
+    border: 1px solid var(--border); background: var(--surface);
+    border-radius: 9px; font-size: 14px;
+    transition: border-color .15s, background .15s;
+  }
+  .next-link:hover { border-color: rgba(94,234,212,0.4); background: var(--surface-2); }
+  .next-link .k { font-family: var(--mono); font-size: 12px; color: var(--text-dimmer); }
+  .next-link .t { color: var(--text); }
+  .next-link .arrow { color: var(--accent); }
+
+  /* FOOTER */
+  footer {
+    padding: 40px 24px 56px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--text-dimmer); font-size: 13px;
+  }
+  .footer-inner {
+    max-width: var(--maxw); margin: 0 auto;
+    display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+    align-items: center;
+  }
+  .footer-links { display: flex; gap: 22px; }
+  .footer-links a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark">b</span>
+      <span class="brand-name">brk</span>
+    </a>
+    <nav class="nav-links">
+      <a href="/guide/">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/">架构</a>
+      <a href="/recipes/">实战</a>
+    </nav>
+    <div class="nav-right">
+      <span class="ver">brk.zxmot.com</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="side">
+    <div class="side-title">扩展机制</div>
+
+    <ul class="side-list">
+      <li><a href="/extensions/" class="dim"><span class="num">—</span>总览<span class="soon">待写</span></a></li>
+      <li><a href="/extensions/brk-html/" class="active"><span class="num">01</span>brk.html</a></li>
+      <li><a href="/extensions/component-libraries/" class="dim"><span class="num">02</span>组件库扩展<span class="soon">待写</span></a></li>
+      <li><a href="/extensions/webcomponent/" class="dim"><span class="num">03</span>Web Component<span class="soon">待写</span></a></li>
+    </ul>
+  </aside>
+
+  <!-- CONTENT -->
+  <main>
+    <div class="crumb">文档 / 扩展机制 / <b>brk.html</b></div>
+    <h1>brk.html</h1>
+    <p class="lede">
+      一个基于 Shadow DOM 的<b>样式作用域容器</b>。<br>
+      它不注册自定义元素，不用 <code style="font-family:var(--mono);font-size:14px;color:var(--accent)">customElements.define()</code>，
+      也不走 <code style="font-family:var(--mono);font-size:14px;color:var(--accent)">&lt;template&gt;</code> + <code style="font-family:var(--mono);font-size:14px;color:var(--accent)">cloneNode()</code> 那套。
+      它只借用了 Web Component 规范中的一件事：<b>Shadow DOM 的样式隔离</b>。
+    </p>
+
+    <!-- 签名 -->
+    <div class="sig">
+      <span class="fn">brk.html</span>: <span class="ty">FunctionComponent</span>&lt;{ cls?, css?, clk?, ... }&gt;
+      <span class="cm">  // 返回一个普通的 HTMLElement（外层 div）</span>
+    </div>
+
+    <!-- ============ 01 它解决什么问题 ============ -->
+    <section class="sec">
+      <div class="sec-head">
+        <span class="sec-idx">01 —</span>
+        <h2>它解决什么问题</h2>
+      </div>
+
+      <p>
+        真实项目里总会有这样的时刻：你从外部引入了一个复杂组件（一个富文本编辑器、一个图表库、一个 UI 组件），
+        它自带一堆样式，你需要给它"套一层自定义外观"，但又不想影响自己项目里其他地方的样式。
+      </p>
+
+      <p>
+        这时有两个极端选择：
+      </p>
+
+      <p>
+        · <b>全部写成行内样式。</b> 完全隔离，但一段复杂组件的样式会变成几百行 <code class="inline plain">css="..."</code>，无法维护；<br>
+        · <b>直接加 class。</b> 干净，但只要类名撞一次，两边的样式就互相污染。
+      </p>
+
+      <p>
+        <code class="inline plain">brk.html</code> 提供第三种选择：<b>把内容放进一个 Shadow Root 里</b>，
+        在里面用正常的 CSS 写样式——外面看不见里面，里面也看不见外面。
+      </p>
+
+      <div class="quote">
+        <p>它是一个样式隔离区，不是一个组件化方案。</p>
+        <p>它不会让代码变得"可复用"、不会带来生命周期、不会有 props 校验。它只做一件事：让 CSS 作用域互相不干扰。</p>
+      </div>
+    </section>
+
+    <!-- ============ 02 最小示例 ============ -->
+    <section class="sec">
+      <div class="sec-head">
+        <span class="sec-idx">02 —</span>
+        <h2>最小示例</h2>
+      </div>
+
+      <p>
+        下面是一个完整的页面级组件——一个带页头、导航和内容区的应用骨架。
+        所有样式写在内部的 <code class="inline plain">&lt;style&gt;</code> 里，不会泄漏到外面。
+      </p>
+
+      <div class="code">
+        <div class="code-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="code-title">shell.tsx</span>
+        </div>
+        <pre><code><span class="k">import</span> { brk } <span class="k">from</span> <span class="s">'@/brk'</span>;
+
+<span class="k">export const</span> <span class="f">Shell</span> = ({ name, title, menus }: <span class="k">any</span>) =&gt; (
+  <span class="t">&lt;brk.html</span> <span class="a">css</span>=<span class="s">"display: block; min-height: 100vh"</span><span class="t">&gt;</span>
+    <span class="t">&lt;style&gt;</span>{<span class="s">`
+      :host {
+        --c-line: #e5e7eb;
+        --max-w:  1080px;
+      }
+      .header {
+        border-bottom: 1px solid var(--c-line);
+      }
+      .header .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 60px;
+        max-width: var(--max-w);
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .main {
+        max-width: var(--max-w);
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      .nav a {
+        margin-left: 20px;
+        color: #6b7280;
+        text-decoration: none;
+      }
+      .nav a:hover { color: #111827; }
+    `}</span><span class="t">&lt;/style&gt;</span>
+
+    <span class="t">&lt;header</span> <span class="a">cls</span>=<span class="s">"header"</span><span class="t">&gt;</span>
+      <span class="t">&lt;div</span> <span class="a">cls</span>=<span class="s">"container"</span><span class="t">&gt;</span>
+        <span class="t">&lt;a</span> <span class="a">href</span>=<span class="s">"/"</span> <span class="a">cls</span>=<span class="s">"logo"</span><span class="t">&gt;</span>{name}<span class="t">&lt;/a&gt;</span>
+        <span class="t">&lt;nav</span> <span class="a">cls</span>=<span class="s">"nav"</span><span class="t">&gt;</span>
+          {menus.<span class="f">map</span>((item: <span class="k">any</span>) =&gt; (
+            <span class="t">&lt;a</span> <span class="a">href</span>={item.href}<span class="t">&gt;</span>{item.name}<span class="t">&lt;/a&gt;</span>
+          ))}
+        <span class="t">&lt;/nav&gt;</span>
+      <span class="t">&lt;/div&gt;</span>
+    <span class="t">&lt;/header&gt;</span>
+
+    <span class="t">&lt;main</span> <span class="a">cls</span>=<span class="s">"main"</span><span class="t">&gt;</span>
+      <span class="t">&lt;h1&gt;</span>{title}<span class="t">&lt;/h1&gt;</span>
+      <span class="t">&lt;div</span> <span class="a">cls</span>=<span class="s">"placeholder"</span><span class="t">/&gt;</span>
+    <span class="t">&lt;/main&gt;</span>
+  <span class="t">&lt;/brk.html&gt;</span>
+);</code></pre>
+      </div>
+
+      <p>
+        三点值得注意：
+      </p>
+
+      <p>
+        · <b>外层 <code class="inline plain">&lt;brk.html&gt;</code> 上可以写 <code class="inline plain">cls</code> / <code class="inline plain">css</code> / <code class="inline plain">clk</code></b>，
+        它们会作用在返回的那个外层 <code class="inline plain">&lt;div&gt;</code> 上；<br>
+
+        · <b>内部的 <code class="inline plain">&lt;style&gt;</code> 是原生标签</b>，
+        会被正常创建并挂到 shadow root 上，只影响这个 shadow 内部；<br>
+
+        · <b><code class="inline plain">:host</code> 指向外层 div</b>，
+        所以 <code class="inline plain">:host { display: block }</code> 就是给外层 div 设样式。
+      </p>
+    </section>
+
+    <!-- ============ 03 内部结构 ============ -->
+    <section class="sec">
+      <div class="sec-head">
+        <span class="sec-idx">03 —</span>
+        <h2>它在 DOM 里长什么样</h2>
+      </div>
+
+      <p>
+        <code class="inline plain">brk.html</code> 返回的是一个普通的 <code class="inline plain">&lt;div&gt;</code>——
+        它没有什么特别之处，你可以像操作任何元素一样操作它。特别的是它内部挂着一个 Shadow Root：
+      </p>
+
+      <div class="dom">
+<pre><span class="g">&lt;div</span> <span class="y">css="display: block"</span><span class="g">&gt;</span>           <span class="g">← brk.html 返回的元素</span>
+  <span class="p">#shadow-root (open)</span>              <span class="g">← 内部隔离区</span>
+    <span class="b">&lt;style&gt;</span>...<span class="b">&lt;/style&gt;</span>               <span class="g">← 你的 CSS，只在这里生效</span>
+    <span class="b">&lt;header</span> <span class="n">class="header"</span><span class="b">&gt;</span>        <span class="g">← 你的内容</span>
+      <span class="b">&lt;div</span> <span class="n">class="container"</span><span class="b">&gt;</span>...<span class="b">&lt;/div&gt;</span>
+    <span class="b">&lt;/header&gt;</span>
+    <span class="b">&lt;main</span> <span class="n">class="main"</span><span class="b">&gt;</span>...<span class="b">&lt;/main&gt;</span>
+  <span class="p">#/shadow-root</span>
+<span class="g">&lt;/div&gt;</span></pre>
+      </div>
+
+      <p>
+        这种结构和你在浏览器里直接用 <code class="inline plain">attachShadow({ mode: 'open' })</code>
+        建立的结构完全一致——<b>因为 brk 做的就是这件事</b>。没有额外的一层、没有隐藏的机制。
+      </p>
+
+      <p>
+        <code class="inline plain">mode: 'open'</code> 意味着你在 DevTools 里能直接看到 <code class="inline plain">#shadow-root</code> 的内容，
+        也可以用 <code class="inline plain">element.shadowRoot</code> 在代码里访问它。
+      </p>
+    </section>
+
+    <!-- ============ 04 属性和 :host ============ -->
+    <section class="sec">
+      <div class="sec-head">
+        <span class="sec-idx">04 —</span>
+        <h2>属性、<code style="font-family:var(--mono);font-size:18px;color:var(--accent)">:host</code> 与样式作用域</h2>
+      </div>
+
+      <p>
+        属性处理很简单：<b>你传给 <code class="inline plain">&lt;brk.html&gt;</code> 的所有属性，都会被应用到外层 <code class="inline plain">&lt;div&gt;</code> 上</b>。
+        这与 brk 里任何其他元素的行为完全一致。
+      </p>
+
+      <div class="tbl">
+        <table>
+          <thead>
+            <tr>
+              <th>写法</th>
+              <th>效果</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code class="plain">cls="widget"</code></td>
+              <td>外层 div 加上 <code>class="widget"</code>（注意是外部样式表的类，不受 shadow 影响）</td>
+            </tr>
+            <tr>
+              <td><code class="plain">css="display:block"</code></td>
+              <td>外层 div 的 <code>style</code> 属性</td>
+            </tr>
+            <tr>
+              <td><code class="plain">clk={handler}</code></td>
+              <td>外层 div 的点击事件（能捕获 shadow 内冒泡上来的点击）</td>
+            </tr>
+            <tr>
+              <td><code class="plain">id="app"</code></td>
+              <td>外层 div 的 <code>id</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        <b><code class="inline plain">:host</code> 就是外层 div</b>。这是 Shadow DOM 规范里定义的行为——
+        brk 严格遵守它，没有做任何改变。所以在内部的 <code class="inline plain">&lt;style&gt;</code> 里：
+      </p>
+
+      <div class="code">
+        <div class="code-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="code-title">shadow 内的 &lt;style&gt;</span>
+        </div>
+        <pre><code><span class="c">/* 作用在外层 div 上 */</span>
+<span class="t">:host</span> {
+  <span class="a">display</span>: block;
+  <span class="a">--brand</span>: #5eead4;          <span class="c">/* CSS 变量可以透给内部 */</span>
+}
+
+<span class="c">/* 只在 host 处于某个状态时生效 */</span>
+<span class="t">:host</span>([<span class="a">data-open</span>]) {
+  <span class="a">transform</span>: scale(1.02);
+}
+
+<span class="c">/* 内部元素 —— 外部同名 class 影响不到它 */</span>
+<span class="t">.header</span> {
+  <span class="a">border-bottom</span>: 1px solid var(--brand);
+}</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <div class="ic">!</div>
+        <div>
+          <p><b><code>:root</code> 在 shadow 里不生效。</b>
+          因为 <code>:root</code> 指的是 <code>&lt;html&gt;</code>，
+          而 shadow 里的内容不在 <code>&lt;html&gt;</code> 的直接命名空间里。
+          用 <code>:host</code> 代替。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 05 约束 ============ -->
+    <section class="sec">
+      <div class="sec-head">
+        <span class="sec-idx">05 —</span>
+        <h2>三条约束</h2>
+      </div>
+
+      <p>
+        Shadow DOM 的隔离是双向的。这一点在带来好处的同时，也带来三条需要注意的约束。
+      </p>
+
+      <p>
+        <b>1. 外部全局样式进不来。</b>
+        <code class="inline plain">init.css</code> 里定义的类、内置组件的样式、
+        任何"宿主的全局样式"——都不会影响 shadow 内部。
+        内部必须有自己完整的样式定义。
+      </p>
+
+      <p>
+        <b>2. 不要在内部使用 <code class="inline plain">brk.card</code> 之类的全局组件。</b>
+        它在外部是有样式的（来自全局 CSS），到了 shadow 里就"没皮肤"了——
+        它依然会渲染成一个 div，但视觉上和外部完全不同。
+      </p>
+
+      <p>
+        <b>3. 内部样式也出不去。</b>
+        内部定义了一个 <code class="inline plain">.widget</code> 类，
+        外部再写 <code class="inline plain">.widget</code> 也不会冲突，但也不会共享。
+      </p>
+
+      <div class="callout danger">
+        <div class="ic">×</div>
+        <div>
+          <p><b>这三点不是 brk 的限制，是 Shadow DOM 本身的性质。</b>
+          brk 借用它的隔离能力，就同时接受了它的隔离边界。这是取舍的一部分，不是 bug。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 06 关于 CSS 字符串 ============ -->
+    <section class="sec">
+      <div class="sec-head">
+        <span class="sec-idx">06 —</span>
+        <h2>关于 <code style="font-family:var(--mono);font-size:18px;color:var(--accent)">&lt;style&gt;</code> 里的 CSS</h2>
+      </div>
+
+      <p>
+        brk 不提供 CSS 的处理能力——它不解析 CSS、不解析 <code class="inline plain">@import</code>、
+        不帮你把 <code class="inline plain">.css</code> 文件转成字符串。它只接受一个字符串作为 <code class="inline plain">&lt;style&gt;</code> 的内容。
+      </p>
+
+      <p>
+        这个字符串从哪里来，完全由你决定。常见几种做法：
+      </p>
+
+      <div class="tbl">
+        <table>
+          <thead>
+            <tr>
+              <th>做法</th>
+              <th>说明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>内联模板字符串</td>
+              <td>直接在 <code>style</code> 标签里写 <code>`...`</code>，适合样式少、且只此一处的情况</td>
+            </tr>
+            <tr>
+              <td>esbuild 文本加载</td>
+              <td>配置 <code>loader: { '.css': 'text' }</code> 后 <code>import css from './view.css'</code> 得到字符串</td>
+            </tr>
+            <tr>
+              <td>独立 <code>.css.txt</code></td>
+              <td>如果 <code>.css</code> 有别的 loader 占用，用 <code>.css.txt</code> 后缀避开冲突</td>
+            </tr>
+            <tr>
+              <td>运行时拼接</td>
+              <td>从主题变量拼接字符串，用于动态主题场景</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <div class="ic">//</div>
+        <div>
+          <p><b>构建配置是你的自由。</b> brk 不关心你的 <code>.css</code> 怎么加载进来，
+          只关心它最终是不是一个字符串。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 07 与 Web Component 的关系 ============ -->
+    <section class="sec">
+      <div class="sec-head">
+        <span class="sec-idx">07 —</span>
+        <h2>它与 Web Component 的关系</h2>
+      </div>
+
+      <p>
+        <code class="inline plain">brk.html</code> 借用了 Web Component 规范中的一部分——Shadow DOM 的样式隔离。
+        但它<b>没有</b>借用其他部分：
+      </p>
+
+      <div class="compare">
+        <div class="cmp-col wc">
+          <h4>// Web Component 完整规范</h4>
+          <ul>
+            <li>调用 <code>customElements.define()</code> 注册标签</li>
+            <li>使用 <code>&lt;template&gt;</code> + <code>cloneNode()</code> 定义结构</li>
+            <li>拥有 connectedCallback / disconnectedCallback 等生命周期</li>
+            <li>需要 <code>observedAttributes</code> 处理属性变化</li>
+            <li>有一套完整的"自定义元素"心智模型</li>
+          </ul>
+        </div>
+
+        <div class="cmp-col brk">
+          <h4>// brk.html</h4>
+          <ul>
+            <li>不注册任何标签，只是一个函数</li>
+            <li>不用 template，直接用 JSX 生成</li>
+            <li>没有生命周期——普通 <code>vino</code> 一次渲染</li>
+            <li>属性就是外层 div 的属性，没有 observed 机制</li>
+            <li>只借用 Shadow DOM，不涉及自定义元素</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="quote">
+        <p>brk.html 不是"用 brk 写 Web Component"。</p>
+        <p>它是"借用 Web Component 里唯一真正需要的那一块——样式隔离"。</p>
+      </div>
+
+      <p>
+        这个取舍的结果是：<b>不需要为组件命名、不需要考虑注册时机、不需要担心命名冲突</b>。
+        一个 <code class="inline plain">brk.html</code> 就是一个函数调用，
+        和 brk 里任何其他组件完全一样。
+      </p>
+    </section>
+
+    <!-- ============ 08 什么时候用它 ============ -->
+    <section class="sec">
+      <div class="sec-head">
+        <span class="sec-idx">08 —</span>
+        <h2>什么时候用它，什么时候不用</h2>
+      </div>
+
+      <div class="uses">
+        <div class="use yes">
+          <h4>// 适合</h4>
+          <ul>
+            <li>引入外部复杂组件，需要自定义外观</li>
+            <li>写一个独立的、样式不依赖全局的 UI 模块</li>
+            <li>需要一个"内嵌 widget"，不希望被页面样式影响</li>
+            <li>样式复杂到行内写法不可维护，又不想污染全局</li>
+          </ul>
+        </div>
+        <div class="use no">
+          <h4>// 不适合</h4>
+          <ul>
+            <li>普通的页面组件——直接用函数就行</li>
+            <li>需要用到 <code>brk.card</code> 等全局组件的场景</li>
+            <li>需要复用全局 CSS 变量和工具类的场景</li>
+            <li>想"用 Web Component 写组件"——这不是它的目的</li>
+          </ul>
+        </div>
+      </div>
+
+      <p>
+        判断标准很简单：<b>如果你需要"和外部的样式打架"，就用它；如果外部样式本来就是你想用的，就别用。</b>
+      </p>
+    </section>
+
+    <!-- NEXT -->
+    <div class="next">
+      <div class="next-hint">// 扩展机制 其他内容</div>
+      <div class="next-actions">
+        <a class="next-link" href="/extensions/">
+          <span class="k">←</span>
+          <span class="t">扩展机制总览</span>
+        </a>
+        <a class="next-link" href="/extensions/webcomponent/">
+          <span class="k">03</span>
+          <span class="t">与 Web Component 生态</span>
+          <span class="arrow">→</span>
+        </a>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div>brk — 一个微前端骨架 · brk.zxmot.com</div>
+    <div class="footer-links">
+      <a href="/guide/">指南</a>
+      <a href="/api/">API</a>
+      <a href="/architecture/">架构</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

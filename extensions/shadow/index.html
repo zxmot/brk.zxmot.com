@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>brk.shadow — brk 扩展机制</title>
-<meta name="description" content="brk.shadow：一个让样式彼此隔离的容器组件，借用 Web Component 的思想，但不注册自定义元素。">
+<title>brk.html — brk 扩展机制</title>
+<meta name="description" content="brk.html：一个让样式彼此隔离的容器组件，借用 Web Component 的思想，但不注册自定义元素。">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%235eead4'/><text x='50' y='72' font-size='70' font-family='monospace' font-weight='800' text-anchor='middle' fill='%2306121a'>b</text></svg>">
 <style>
   :root {
@@ -393,7 +393,7 @@
     <div class="side-title">扩展机制</div>
     <ul class="side-list">
       <li><a href="/extensions/"><span class="nm">概览</span></a></li>
-      <li><a href="/extensions/shadow/" class="active"><span class="nm">brk.shadow</span></a></li>
+      <li><a href="/extensions/shadow/" class="active"><span class="nm">brk.html</span></a></li>
       <li><a href="#"><span class="nm">组件库扩展</span><span class="soon">待补</span></a></li>
       <li><a href="#"><span class="nm">插件协议</span><span class="soon">待补</span></a></li>
     </ul>
@@ -401,8 +401,8 @@
 
   <!-- CONTENT -->
   <main>
-    <div class="crumb">文档 / 扩展机制 / <b>brk.shadow</b></div>
-    <h1>brk.shadow</h1>
+    <div class="crumb">文档 / 扩展机制 / <b>brk.html</b></div>
+    <h1>brk.html</h1>
     <p class="lede">
       一个容器组件。放进去的内容，样式和外面互不干扰。<br>
       当你想给一块界面单独一套 CSS，又不想被页面上其他样式影响到时，用它。
@@ -416,8 +416,8 @@
       </div>
 
       <p>
-        <code class="inline">brk.shadow</code> 是一个函数组件，和 <code class="inline plain">brk.card</code>
-        在用法上没有区别——都是 <code class="inline plain">&lt;brk.shadow&gt;...&lt;/brk.shadow&gt;</code> 这样用。
+        <code class="inline">brk.html</code> 是一个函数组件，和 <code class="inline plain">brk.card</code>
+        在用法上没有区别——都是 <code class="inline plain">&lt;brk.html&gt;...&lt;/brk.html&gt;</code> 这样用。
       </p>
 
       <p>
@@ -489,7 +489,7 @@
       </p>
 
       <p>
-        <code class="inline">brk.shadow</code> 提供了第四条路：<b>把样式写进一个封闭的作用域里。</b>
+        <code class="inline">brk.html</code> 提供了第四条路：<b>把样式写进一个封闭的作用域里。</b>
       </p>
     </section>
 
@@ -513,7 +513,7 @@
         <pre><code><span class="k">import</span> { brk } <span class="k">from</span> <span class="s">'@/brk'</span>;
 
 <span class="k">const</span> <span class="f">DemoApp</span> = ({ name, title, menus }) =&gt; (
-  <span class="t">&lt;brk.shadow</span> <span class="a">styles</span>=<span class="s">\`</span>
+  <span class="t">&lt;brk.html</span> <span class="a">styles</span>=<span class="s">\`</span>
 <span class="css-sel">:host</span> {
   <span class="css-var">--c-line</span>:  <span class="n">#e5e7eb</span>;
   <span class="css-var">--max-w</span>:   <span class="n">1080px</span>;
@@ -547,7 +547,7 @@
     <span class="t">&lt;main</span> <span class="a">cls</span>=<span class="s">"main"</span><span class="t">&gt;</span>
       <span class="t">&lt;h1&gt;</span>{title}<span class="t">&lt;/h1&gt;</span>
     <span class="t">&lt;/main&gt;</span>
-  <span class="t">&lt;/brk.shadow&gt;</span>
+  <span class="t">&lt;/brk.html&gt;</span>
 );</code></pre>
       </div>
 
@@ -575,7 +575,7 @@
       </div>
 
       <p>
-        理解 <code class="inline plain">brk.shadow</code> 最重要的一点，是搞清楚
+        理解 <code class="inline plain">brk.html</code> 最重要的一点，是搞清楚
         <b>什么东西能穿过这个边界，什么东西不能。</b>
       </p>
 
@@ -615,7 +615,7 @@
       </p>
 
       <p>
-        这个设计是有意的——它让 <code class="inline plain">brk.shadow</code>
+        这个设计是有意的——它让 <code class="inline plain">brk.html</code>
         既能做到彻底的样式隔离，又保留了"外部可以调主题色"的能力。
         比如你在页面上设置 <code class="inline plain">--primary: red</code>，
         内部的按钮如果引用了 <code class="inline plain">var(--primary)</code>，
@@ -659,7 +659,7 @@
       <div class="callout">
         <div class="ic">//</div>
         <div>
-          <p><b>一条经验：</b> 当"样式冲突"成为你的主要问题时，用 <code>brk.shadow</code>；
+          <p><b>一条经验：</b> 当"样式冲突"成为你的主要问题时，用 <code>brk.html</code>；
           当"样式复用"是你的主要需求时，别用。前者是为了隔绝，后者是为了共享。</p>
         </div>
       </div>
@@ -676,7 +676,7 @@
         <b>1. 根选择器用 <code class="inline plain">:host</code>，不是 <code class="inline plain">:root</code>。</b><br>
         <code class="inline plain">:root</code> 指的是文档的根元素，
         <code class="inline plain">:host</code> 指的是这个 shadow 容器的宿主元素。
-        在 <code class="inline plain">brk.shadow</code> 里写 <code class="inline plain">:root</code> 不会报错，
+        在 <code class="inline plain">brk.html</code> 里写 <code class="inline plain">:root</code> 不会报错，
         但也不会有任何效果。
       </p>
 
@@ -688,8 +688,8 @@
       </p>
 
       <p>
-        <b>3. 每个 <code class="inline plain">brk.shadow</code> 都是一个独立作用域。</b><br>
-        页面上有 N 个 <code class="inline plain">brk.shadow</code>，就有 N 个互不干扰的样式空间。
+        <b>3. 每个 <code class="inline plain">brk.html</code> 都是一个独立作用域。</b><br>
+        页面上有 N 个 <code class="inline plain">brk.html</code>，就有 N 个互不干扰的样式空间。
         这也意味着你无法"在 A 里定义一次，让 B 也生效"——需要共享的样式，
         应该提到两者之外，或者用 CSS 变量传进去。
       </p>
@@ -716,7 +716,7 @@
 
 <footer>
   <div class="footer-inner">
-    <div>brk — 一个微前端骨架 · brk.zxmot.com</div>
+    <div>brk · 一个微前端骨架 · brk.zxmot.com</div>
     <div class="footer-links">
       <a href="/guide/">指南</a>
       <a href="/api/">API</a>
